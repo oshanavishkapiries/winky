@@ -80,7 +80,7 @@ function countHTMLTokens(filePath, options = {}) {
     const absolutePath = path.resolve(filePath);
 
     if (!fs.existsSync(absolutePath)) {
-        console.error(`❌ File not found: ${absolutePath}`);
+        console.error(`[error] file not found: ${absolutePath}`);
         process.exit(1);
     }
 
@@ -106,29 +106,23 @@ function countHTMLTokens(filePath, options = {}) {
     const now = new Date();
     const timestampId = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('📊 HTML TOKEN COUNT ANALYSIS');
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log(`📄 File: ${path.basename(absolutePath)}`);
-    console.log(`🆔 Analysis ID: ${timestampId}`);
-    console.log(`📁 Path: ${absolutePath}`);
-    console.log('───────────────────────────────────────────────────────────');
+    console.log('[start] token-count');
+    console.log(`[file] ${path.basename(absolutePath)}`);
+    console.log(`[session] ${timestampId}`);
+    console.log(`[path] ${absolutePath}`);
 
-    console.log('\n📏 FILE METRICS:');
-    console.log(`   • File Size: ${fileSizeKB} KB (${fileSizeBytes.toLocaleString()} bytes)`);
-    console.log(`   • Characters: ${charCount.toLocaleString()}`);
-    console.log(`   • Lines: ${lineCount.toLocaleString()}`);
-    console.log(`   • HTML Tags: ${tagCount.toLocaleString()}`);
-    console.log(`   • HTML Elements: ${elementCount.toLocaleString()}`);
+    console.log(`[size] ${fileSizeKB} KB (${fileSizeBytes.toLocaleString()} bytes)`);
+    console.log(`[chars] ${charCount.toLocaleString()}`);
+    console.log(`[lines] ${lineCount.toLocaleString()}`);
+    console.log(`[tags] ${tagCount.toLocaleString()}`);
+    console.log(`[elements] ${elementCount.toLocaleString()}`);
 
-    console.log('\n🔢 TOKEN ESTIMATES:');
-    console.log(`   • Word-based (~1.3 tokens/word): ${wordBasedTokens.toLocaleString()} tokens`);
-    console.log(`   • Character-based (~3.5 chars/token): ${charBasedTokens.toLocaleString()} tokens`);
-    console.log(`   • GPT-style (BPE approximation): ${gptStyleTokens.toLocaleString()} tokens`);
-    console.log('───────────────────────────────────────────────────────────');
-    console.log(`   ⭐ RECOMMENDED ESTIMATE: ~${gptStyleTokens.toLocaleString()} tokens`);
+    console.log(`[tokens-word] ${wordBasedTokens.toLocaleString()}`);
+    console.log(`[tokens-char] ${charBasedTokens.toLocaleString()}`);
+    console.log(`[tokens-gpt] ${gptStyleTokens.toLocaleString()}`);
+    console.log(`[tokens-recommended] ${gptStyleTokens.toLocaleString()}`);
 
-    console.log('\n💡 LLM CONTEXT USAGE:');
+    console.log('[context-usage]');
     const models = [
         { name: 'GPT-3.5 (4K)', limit: 4096 },
         { name: 'GPT-3.5 (16K)', limit: 16384 },
@@ -142,11 +136,11 @@ function countHTMLTokens(filePath, options = {}) {
     models.forEach(model => {
         const usage = ((gptStyleTokens / model.limit) * 100).toFixed(1);
         const fits = gptStyleTokens <= model.limit;
-        const icon = fits ? '✅' : '❌';
-        console.log(`   ${icon} ${model.name}: ${usage}% of context`);
+        const status = fits ? 'ok' : 'exceed';
+        console.log(`[${status}] ${model.name}: ${usage}%`);
     });
 
-    console.log('═══════════════════════════════════════════════════════════\n');
+    console.log('[done] token-count');
 
     // Optionally save report to file
     if (options.saveReport) {
@@ -180,7 +174,7 @@ function countHTMLTokens(filePath, options = {}) {
         };
 
         fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
-        console.log(`📄 Report saved to: ${path.relative(projectRoot, reportPath)}\n`);
+        console.log(`[saved] ${path.relative(projectRoot, reportPath)}`);
     }
 
     return {

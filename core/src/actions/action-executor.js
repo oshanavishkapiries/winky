@@ -137,8 +137,44 @@ class ActionExecutor {
 
     async executeInputText(action) {
         const element = await this.getElement(action.element_id);
+        const elementInfo = this.elementMap[action.element_id] || {};
+
         await element.fill('');
         await element.fill(action.text);
+
+        // Determine if we should press Enter after input
+        const shouldPressEnter = action.press_enter === true ||
+            (action.press_enter !== false && this.isSearchInput(elementInfo));
+
+        if (shouldPressEnter) {
+            await this.page.keyboard.press('Enter');
+            console.log('  [keypress] Enter');
+        }
+    }
+
+    /**
+     * Check if element is a search input
+     */
+    isSearchInput(elementInfo) {
+        const searchIndicators = ['search', 'query', 'q', 'keyword', 'find'];
+        const type = (elementInfo.type || '').toLowerCase();
+        const name = (elementInfo.name || '').toLowerCase();
+        const placeholder = (elementInfo.placeholder || '').toLowerCase();
+        const ariaLabel = (elementInfo['aria-label'] || '').toLowerCase();
+
+        // Check if type is search
+        if (type === 'search') return true;
+
+        // Check if name, placeholder, or aria-label contains search indicators
+        for (const indicator of searchIndicators) {
+            if (name.includes(indicator) ||
+                placeholder.includes(indicator) ||
+                ariaLabel.includes(indicator)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     async executeSelectOption(action) {

@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
 
 const { createAdapter, config } = require('./llm');
 const { parseAction, isTerminal, ActionExecutor } = require('./actions');
-const { simplifyHTML } = require('./simplify-html');
+const { simplifyHTML } = require('./scripts/simplify-html');
 
 class Agent {
     constructor(options = {}) {

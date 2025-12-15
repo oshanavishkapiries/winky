@@ -48,7 +48,7 @@ function cleanFolder(folderPath) {
 }
 
 function main() {
-    console.log('🧹 Cleaning data folder...\n');
+    console.log('[start] clean-data');
 
     let totalCleaned = 0;
 
@@ -57,15 +57,15 @@ function main() {
 
         if (fs.existsSync(folderPath)) {
             const count = cleanFolder(folderPath);
-            console.log(`   ✅ ${folder}: ${count} files removed`);
+            console.log(`[cleaned] ${folder}: ${count} files`);
             totalCleaned += count;
         } else {
-            console.log(`   ⏭️  ${folder}: not found`);
+            console.log(`[skipped] ${folder}: not found`);
         }
     }
 
-    console.log(`\n📊 Total: ${totalCleaned} files removed`);
-    console.log('✨ Data folder cleaned!\n');
+    console.log(`[total] ${totalCleaned} files removed`);
+    console.log('[done] clean-data');
 }
 
 main();

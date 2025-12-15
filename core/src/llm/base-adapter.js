@@ -5,43 +5,43 @@
  */
 
 class BaseLLMAdapter {
-    constructor(config) {
-        this.config = config;
-        this.name = 'base';
-    }
+  constructor(config) {
+    this.config = config;
+    this.name = 'base';
+  }
 
-    /**
-     * Generate next action from LLM
-     * @param {Object} context - Current context
-     * @param {string} context.goal - User's goal
-     * @param {string} context.simplifiedHtml - Simplified HTML of current page
-     * @param {Object} context.elementMap - UUID to element info mapping
-     * @param {Array} context.previousActions - List of previous actions taken
-     * @param {string} context.currentUrl - Current page URL
-     * @returns {Promise<Object>} - Action object from LLM
-     */
-    async generateAction(context) {
-        throw new Error('generateAction must be implemented by subclass');
-    }
+  /**
+   * Generate next action from LLM
+   * @param {Object} context - Current context
+   * @param {string} context.goal - User's goal
+   * @param {string} context.simplifiedHtml - Simplified HTML of current page
+   * @param {Object} context.elementMap - UUID to element info mapping
+   * @param {Array} context.previousActions - List of previous actions taken
+   * @param {string} context.currentUrl - Current page URL
+   * @returns {Promise<Object>} - Action object from LLM
+   */
+  async generateAction(context) {
+    throw new Error('generateAction must be implemented by subclass');
+  }
 
-    /**
-     * Build the prompt for the LLM
-     * @param {Object} context - Current context
-     * @returns {string} - Formatted prompt
-     */
-    buildPrompt(context) {
-        const { goal, simplifiedHtml, elementMap, previousActions, currentUrl } = context;
+  /**
+   * Build the prompt for the LLM
+   * @param {Object} context - Current context
+   * @returns {string} - Formatted prompt
+   */
+  buildPrompt(context) {
+    const { goal, simplifiedHtml, elementMap, previousActions, currentUrl } = context;
 
-        const actionsHistory = previousActions?.length > 0
-            ? previousActions.map((a, i) => `${i + 1}. ${a.action_type}: ${a.reasoning}`).join('\n')
-            : 'No actions taken yet.';
+    const actionsHistory = previousActions?.length > 0
+      ? previousActions.map((a, i) => `${i + 1}. ${a.action_type}: ${a.reasoning}`).join('\n')
+      : 'No actions taken yet.';
 
-        const elementInfo = Object.entries(elementMap || {})
-            .slice(0, 100)
-            .map(([uuid, info]) => `${uuid}: ${info.tag}${info.text ? ` "${info.text.substring(0, 50)}"` : ''}`)
-            .join('\n');
+    const elementInfo = Object.entries(elementMap || {})
+      .slice(0, 100)
+      .map(([uuid, info]) => `${uuid}: ${info.tag}${info.text ? ` "${info.text.substring(0, 50)}"` : ''}`)
+      .join('\n');
 
-        return `You are a browser automation agent. Your task is to interact with web pages to achieve the user's goal AND intelligently extract useful data.
+    return `You are a browser automation agent. Your task is to interact with web pages to achieve the user's goal AND intelligently extract useful data.
 
 ## Current URL
 ${currentUrl || 'Unknown'}
@@ -64,7 +64,7 @@ ${simplifiedHtml?.substring(0, 15000) || 'No HTML available'}
 
 ### Element-based actions
 - click: Click element. Requires: element_id
-- input_text: Type into input. Requires: element_id, text
+- input_text: Type into input. Requires: element_id, text. Optional: press_enter (auto-detected for search inputs)
 - select_option: Select dropdown. Requires: element_id, option
 - hover: Hover element. Requires: element_id
 
@@ -166,30 +166,30 @@ IMPORTANT:
 - Be thorough - extract all relevant fields visible on the page
 
 Respond with ONLY the JSON object, no additional text.`;
-    }
+  }
 
-    /**
-     * Parse LLM response into action object
-     * @param {string} response - Raw LLM response
-     * @returns {Object} - Parsed action object
-     */
-    parseResponse(response) {
-        try {
-            // Try to extract JSON from response
-            const jsonMatch = response.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
-            throw new Error('No JSON found in response');
-        } catch (error) {
-            console.error('Failed to parse LLM response:', error.message);
-            return {
-                action_type: 'wait',
-                reasoning: 'Failed to parse LLM response, waiting...',
-                seconds: 2
-            };
-        }
+  /**
+   * Parse LLM response into action object
+   * @param {string} response - Raw LLM response
+   * @returns {Object} - Parsed action object
+   */
+  parseResponse(response) {
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('No JSON found in response');
+    } catch (error) {
+      console.error('Failed to parse LLM response:', error.message);
+      return {
+        action_type: 'wait',
+        reasoning: 'Failed to parse LLM response, waiting...',
+        seconds: 2
+      };
     }
+  }
 }
 
 module.exports = { BaseLLMAdapter };

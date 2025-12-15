@@ -22,7 +22,7 @@ const fs = require('fs');
 
   fs.writeFileSync('page-structure.html', html);
 
-  console.log('✅ HTML structure saved as page-structure.html');
+  console.log('[done] saved page-structure.html');
 
   await browser.close();
 })();
