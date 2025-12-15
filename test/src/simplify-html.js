@@ -456,15 +456,19 @@ function removeEmptyContainers(document) {
 // ============================================================================
 
 function simplifyHTML(inputPath, options = {}) {
-    // Determine project root (parent of src folder)
+    // Options
     const projectRoot = options.projectRoot || path.resolve(__dirname, '..');
+    const silent = options.silent || false;
+    const log = silent ? () => { } : console.log.bind(console);
+    const logError = silent ? () => { } : console.error.bind(console);
 
     // Read the input HTML file
     const absolutePath = path.resolve(inputPath);
 
     if (!fs.existsSync(absolutePath)) {
-        console.error(`❌ File not found: ${absolutePath}`);
-        process.exit(1);
+        logError(`[error] File not found: ${absolutePath}`);
+        if (!silent) process.exit(1);
+        return null;
     }
 
     const htmlContent = fs.readFileSync(absolutePath, 'utf8');

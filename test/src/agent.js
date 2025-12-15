@@ -39,11 +39,11 @@ class Agent {
     }
 
     async initialize() {
-        console.log('🚀 Initializing browser automation agent...\n');
+        console.log('[init] Starting agent...');
 
         // Initialize LLM adapter
         this.llm = createAdapter(this.options.llmProvider);
-        console.log(`🤖 LLM: ${this.llm.getModelInfo().model}`);
+        console.log(`[init] LLM: ${this.llm.getModelInfo().model}`);
 
         // Launch browser using local Chrome TODO: this for local chrome
         const chromePath = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
@@ -60,13 +60,13 @@ class Agent {
         this.page = await context.newPage();
         this.executor = new ActionExecutor(this.page);
 
-        console.log('🌐 Browser launched\n');
+        console.log('[init] Browser ready');
     }
 
     async close() {
         if (this.browser) {
             await this.browser.close();
-            console.log('\n🔒 Browser closed');
+            console.log('[done] Browser closed');
         }
     }
 
@@ -114,38 +114,33 @@ class Agent {
      * @returns {Object} - Execution result
      */
     async run(url, goal) {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('🎯 AUTONOMOUS BROWSER AGENT');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log(`📍 URL: ${url}`);
-        console.log(`🎯 Goal: ${goal}`);
-        console.log(`🆔 Session: ${this.sessionId}`);
-        console.log('───────────────────────────────────────────────────────────\n');
+        console.log('\n[agent] Browser Automation Agent');
+        console.log(`[agent] URL: ${url}`);
+        console.log(`[agent] Goal: ${goal}`);
+        console.log(`[agent] Session: ${this.sessionId}\n`);
 
         try {
             await this.initialize();
 
             // Navigate to starting URL
-            console.log(`🌐 Navigating to ${url}...`);
+            console.log(`[nav] ${url}`);
             await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
             await this.page.waitForTimeout(2000); // Wait for page to stabilize
 
             // Autonomous loop
             while (this.currentStep < this.options.maxSteps) {
                 this.currentStep++;
-                console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-                console.log(`📍 Step ${this.currentStep}/${this.options.maxSteps}`);
-                console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                console.log(`\n[step ${this.currentStep}/${this.options.maxSteps}]`);
 
                 // Get current page state
-                console.log('📸 Analyzing page...');
+                // Get current page state (silent)
                 const pageState = await this.getPageState();
 
                 this.executor.setElementMap(pageState.elementMap);
-                console.log(`📊 Found ${Object.keys(pageState.elementMap).length} interactive elements`);
+                console.log(`  elements: ${Object.keys(pageState.elementMap).length}`);
 
                 // Get action from LLM
-                console.log('🤔 Thinking...');
+                // LLM thinking...
                 const context = {
                     goal,
                     simplifiedHtml: pageState.simplifiedHtml,
@@ -157,8 +152,8 @@ class Agent {
                 const rawAction = await this.llm.generateAction(context);
                 const action = parseAction(rawAction, pageState.elementMap);
 
-                console.log(`\n💡 Action: ${action.action_type.toUpperCase()}`);
-                console.log(`📝 Reasoning: ${action.reasoning}`);
+                console.log(`  action: ${action.action_type}`);
+                console.log(`  reason: ${action.reasoning.substring(0, 100)}${action.reasoning.length > 100 ? '...' : ''}`);
 
                 // Execute action
                 const result = await this.executor.execute(action);
@@ -176,7 +171,7 @@ class Agent {
 
                 // Check for terminal actions
                 if (isTerminal(action.action_type)) {
-                    console.log(`\n✅ Terminal action reached: ${action.action_type}`);
+                    console.log(`  [done] ${action.action_type}`);
 
                     // Capture extracted data and output preferences
                     if (action.extracted_data) {
@@ -198,7 +193,7 @@ class Agent {
             }
 
             if (this.currentStep >= this.options.maxSteps) {
-                console.log(`\n⚠️ Max steps (${this.options.maxSteps}) reached`);
+                console.log(`[warn] Max steps (${this.options.maxSteps}) reached`);
             }
 
         } catch (error) {
@@ -253,25 +248,23 @@ class Agent {
             results.outputFiles = outputFiles;
         }
 
-        console.log('\n═══════════════════════════════════════════════════════════');
-        console.log('📊 RESULTS');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log(`✅ Status: ${results.status}`);
-        console.log(`📝 Total Steps: ${results.totalSteps}`);
-        console.log(`📄 Log saved: ${path.relative(projectRoot, logPath)}`);
+
+        console.log('\n[results]');
+        console.log(`  status: ${results.status}`);
+        console.log(`  steps: ${results.totalSteps}`);
+        console.log(`  log: ${path.relative(projectRoot, logPath)}`);
 
         if (results.outputFiles.length > 0) {
-            console.log('\n📦 OUTPUT FILES:');
+            console.log('  output:');
             results.outputFiles.forEach(file => {
-                console.log(`   ${file.format === 'json' ? '📋' : '📝'} ${path.relative(projectRoot, file.path)}`);
+                console.log(`    - ${path.relative(projectRoot, file.path)}`);
             });
         }
 
         if (this.extractedData?.summary) {
-            console.log(`\n📌 Summary: ${this.extractedData.summary}`);
+            console.log(`  summary: ${this.extractedData.summary}`);
         }
-
-        console.log('═══════════════════════════════════════════════════════════\n');
+        console.log('');
 
         return results;
     }
@@ -367,8 +360,9 @@ class Agent {
 async function main() {
     const args = process.argv.slice(2);
 
-    if (args.length < 2 || args[0] === '--help' || args[0] === '-h') {
-        console.log('Usage: node src/agent.js <url> "<goal>" [options]');
+    if (args.length < 1 || args[0] === '--help' || args[0] === '-h') {
+        console.log('Usage: node src/agent.js "<goal>" [options]');
+        console.log('       node src/agent.js <url> "<goal>" [options]');
         console.log('');
         console.log('Options:');
         console.log('  --llm <provider>   LLM provider: gemini, cerebras (default: gemini)');
@@ -376,8 +370,13 @@ async function main() {
         console.log('  --quiet            Reduce output verbosity');
         console.log('');
         console.log('Examples:');
-        console.log('  node src/agent.js https://www.google.com "Search for weather in Tokyo"');
-        console.log('  node src/agent.js https://www.google.com "Search for weather" --llm cerebras');
+        console.log('  # URL in prompt (new!)');
+        console.log('  npm run agent "Go to amazon.sg and find best selling books"');
+        console.log('  npm run agent "Search google.com for weather in Tokyo"');
+        console.log('');
+        console.log('  # URL separate (legacy)');
+        console.log('  npm run agent https://www.google.com "Search for weather"');
+        console.log('  npm run agent https://amazon.sg "Find best selling books" -- --llm cerebras');
         process.exit(1);
     }
 
@@ -388,15 +387,46 @@ async function main() {
         llmProvider = args[llmIndex + 1];
     }
 
-    // Get URL and goal (filter out flags)
+    // Get non-flag arguments
     const nonFlagArgs = args.filter((arg, i) => {
         if (arg.startsWith('--')) return false;
         if (i > 0 && args[i - 1] === '--llm') return false;
         return true;
     });
 
-    const url = nonFlagArgs[0];
-    const goal = nonFlagArgs.slice(1).join(' ');
+    let url = null;
+    let goal = '';
+
+    // Check if first arg is a URL
+    const firstArg = nonFlagArgs[0];
+    if (firstArg && (firstArg.startsWith('http://') || firstArg.startsWith('https://'))) {
+        // Legacy mode: URL provided separately
+        url = firstArg;
+        goal = nonFlagArgs.slice(1).join(' ');
+    } else {
+        // New mode: URL embedded in goal
+        goal = nonFlagArgs.join(' ');
+
+        // Try to extract URL from goal
+        const urlPattern = /(?:go to|visit|open|navigate to|on|from)?\s*((?:https?:\/\/)?(?:www\.)?[\w.-]+\.[a-z]{2,}(?:\/[\w.-]*)*)/i;
+        const match = goal.match(urlPattern);
+
+        if (match) {
+            let extractedUrl = match[1];
+            // Add https:// if not present
+            if (!extractedUrl.startsWith('http')) {
+                extractedUrl = 'https://' + extractedUrl;
+            }
+            url = extractedUrl;
+        }
+    }
+
+    // Default to about:blank if no URL found
+    if (!url) {
+        url = 'about:blank';
+        console.log('⚠️ No URL detected in prompt. Starting with blank page.');
+        console.log('   The agent will navigate based on your goal.\n');
+    }
 
     const agent = new Agent({
         headless: args.includes('--headless'),
