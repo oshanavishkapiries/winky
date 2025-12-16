@@ -215,6 +215,11 @@ async function main() {
     }
 }
 
-main();
+// CLI entry point - only run when executed directly
+if (require.main === module) {
+    main();
+}
 
 module.exports = { WkyExecutor };
+
+

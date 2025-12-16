@@ -114,6 +114,31 @@ ${simplifiedHtml?.substring(0, 15000) || 'No HTML available'}
 - complete: Task done. Use when goal is achieved.
 - terminate: Cannot complete. Use when goal is impossible.
 
+## IMPORTANT: Complex Page Navigation Tips
+
+### Sites with Side Panels (Google Maps, Gmail, Airbnb, etc.)
+- When clicking an item opens a DETAILS PANEL on the right/left side, look for:
+  - Back arrow button (←) to return to list
+  - Close button (X) to close panel
+  - Or click outside the panel to dismiss it
+- The main list may be in a SCROLLABLE CONTAINER - scroll within it using element_id
+- If you can't see more items, scroll DOWN within the list panel, not the whole page
+
+### Iterative Extraction Pattern (e.g., "extract 5 items", "do this 5 times")
+Follow this EXACT pattern:
+1. Click item from list → Details panel opens
+2. Extract data (name, price, etc.) from the details panel
+3. Click BACK/CLOSE to return to the list  
+4. Scroll if needed to reveal next item
+5. Click NEXT item → Repeat until target count reached
+6. Use "complete" action only after extracting ALL requested items
+
+### Troubleshooting
+- If clicking doesn't work: Element may be obscured. Try scrolling first.
+- If element not found: Page may need scrolling to reveal it.
+- If stuck in loop: Try a different approach (back button, scroll, different element).
+- If panel covers list: Close the panel first before clicking another item.
+
 ## SMART DATA EXTRACTION RULES
 
 You MUST extract data when:

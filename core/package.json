@@ -1,8 +1,8 @@
 {
-  "name": "html-simplifier",
+  "name": "browser-automation-core",
   "version": "1.0.0",
-  "description": "HTML simplification and browser automation agent for AI/LLM processing",
-  "main": "src/agent.js",
+  "description": "Browser automation agent with HTTP and MCP server support",
+  "main": "index.js",
   "scripts": {
     "agent": "node src/agent.js",
     "wky": "node src/wky-executor.js",
@@ -12,7 +12,9 @@
     "tokens:save": "node src/scripts/count-tokens.js --save",
     "extract": "node src/scripts/extract-html.js",
     "clean": "node src/scripts/clean-data.js",
-    "test:cookies": "node src/scripts/test-cookies.js"
+    "test:cookies": "node src/scripts/test-cookies.js",
+    "start:http": "node servers/http-server.js",
+    "start:mcp": "node servers/mcp-server.js"
   },
   "keywords": [
     "html",
@@ -21,14 +23,18 @@
     "llm",
     "ai",
     "browser-automation",
-    "gemini"
+    "gemini",
+    "mcp"
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@cerebras/cerebras_cloud_sdk": "^1.59.0",
     "@google/generative-ai": "^0.21.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "express": "^4.18.2",
     "jsdom": "^22.1.0",
     "playwright": "^1.57.0",
     "playwright-extra": "^4.3.6",
