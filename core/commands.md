@@ -1,72 +1,196 @@
-# Browser Automation Agent - Test Commands
+# 🤖 Browser Automation Agent - CLI Commands
 
-Copy and paste these commands to test the agent.
-
----
-
-## Basic Tests
-
-```bash
-# Google search (simple)
-npm run agent https://www.google.com "Search for weather in Tokyo"
-```
-
-```bash
-# Amazon best sellers (data extraction)
-npm run agent https://www.amazon.sg/gp/bestsellers/books "Find top 5 best selling books with titles and prices"
-```
+Complete reference for all available commands.
 
 ---
 
-## With LLM Provider Selection
+## 🚀 Agent Commands
+
+Run the AI-powered browser automation agent.
+
+### Basic Usage
 
 ```bash
-# Using Gemini (default)
-npm run agent https://www.google.com "Search for latest news" -- --llm gemini
+# Run agent with a goal
+npm run agent "go to google and search for weather"
+
+# Start from a specific URL
+npm run agent https://google.com "search for latest news"
+
+# Multi-step tasks
+npm run agent "go to linkedin.com and login with email test@email.com password mypass123 then go to jobs"
 ```
 
+### Options
+
 ```bash
-# Using Cerebras (higher token limits)
-npm run agent https://www.google.com "Search for weather forecast" -- --llm cerebras
+# Headless mode (no browser window)
+npm run agent "go to google" -- --headless
+
+# Choose LLM provider
+npm run agent "search something" -- --llm gemini
+npm run agent "search something" -- --llm openrouter
+npm run agent "search something" -- --llm cerebras
+npm run agent "search something" -- --llm ollama
 ```
 
----
-
-## Headless Mode (no browser window)
+### Data Extraction
 
 ```bash
-npm run agent https://www.google.com "Search for Python tutorials" -- --headless
-```
+# Extract data as JSON
+npm run agent "go to amazon.sg and search laptops, extract top 5 with name and price"
 
----
-
-## Data Extraction Examples
-
-```bash
-# Extract product data (JSON output)
-npm run agent https://www.amazon.sg/s?k=laptop "Search for laptops and extract top 5 product names and prices"
-```
-
-```bash
-# Get summary (Markdown output)
-npm run agent https://en.wikipedia.org/wiki/Tokyo "Get a summary of Tokyo including population and area"
+# Extract as Markdown summary
+npm run agent "go to wikipedia.org/wiki/Tokyo and summarize the page"
 ```
 
 ---
 
-## Other Utilities
+## 🐕 WKY Workflow Commands
+
+Execute and manage `.wky` (Winky) workflow files.
+
+### Execute Workflow
 
 ```bash
-# Simplify HTML file
+# Run a .wky workflow file
+npm run wky data/workflows/login-flow.wky
+
+# Run headless
+npm run wky data/workflows/search.wky --headless
+
+# Custom delay between actions (ms)
+npm run wky data/workflows/checkout.wky --delay 2000
+```
+
+### Convert Files
+
+```bash
+# JSON to WKY (auto-detect)
+npm run wky:convert data/logs/log_20251216.json
+
+# WKY to JSON (auto-detect)
+npm run wky:convert data/workflows/my-flow.wky
+
+# Specify output path
+npm run wky:convert log.json --output data/workflows/my-flow.wky
+
+# Explicit direction
+npm run wky:convert file.json --to-wky
+npm run wky:convert file.wky --to-json
+```
+
+---
+
+## 🔧 Utility Commands
+
+### HTML Processing
+
+```bash
+# Simplify HTML file for LLM processing
 npm run simplify data/html-pages/sample.html
+
+# Extract HTML from URL
+npm run extract https://example.com
 ```
 
+### Token Counting
+
 ```bash
-# Count tokens in HTML
+# Count tokens in a file
 npm run tokens data/simplified-html/sample.html
+
+# Count and save report
+npm run tokens:save data/simplified-html/sample.html
 ```
 
+### Data Management
+
 ```bash
-# Count tokens and save report
-npm run tokens:save data/simplified-html/sample.html
+# Clean all generated data files
+npm run clean
+
+# Test cookie loading
+npm run test:cookies
+```
+
+---
+
+## 📁 File Locations
+
+| Type            | Location                |
+| --------------- | ----------------------- |
+| Action Logs     | `data/logs/`            |
+| WKY Workflows   | `data/workflows/`       |
+| Output Data     | `data/output/`          |
+| Cookies         | `data/cookies/`         |
+| Browser Profile | `data/browser-profile/` |
+| Simplified HTML | `data/simplified-html/` |
+| Element Maps    | `data/element-map/`     |
+
+---
+
+## 🔑 Environment Variables
+
+Configure in `.env` file:
+
+```env
+# LLM Provider (gemini, openrouter, cerebras, ollama)
+DEFAULT_LLM=openrouter
+
+# API Keys
+GEMINI_API_KEY=your-key
+OPENROUTER_API_KEY=your-key
+CEREBRAS_API_KEY=your-key
+
+# Browser
+CHROME_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
+HEADLESS=false
+
+# Agent Settings
+AGENT_MAX_STEPS=50
+AGENT_WAIT_BETWEEN_ACTIONS=1000
+```
+
+---
+
+## 📊 Log Viewer
+
+Open `src/tools/log-viewer.html` in browser to visually analyze action logs.
+
+Features:
+
+- Drag & drop JSON log files
+- View simplified HTML at each step
+- View element maps
+- View LLM prompts and responses
+- Accordion-style action cells
+
+---
+
+## 💡 Examples
+
+### Search & Extract
+
+```bash
+npm run agent "go to google, search 'best laptops 2024', extract top 5 results with title and link"
+```
+
+### Login Flow
+
+```bash
+npm run agent "go to github.com, login with user@email.com and password123, go to repositories"
+```
+
+### Save and Replay
+
+```bash
+# Run agent (creates log)
+npm run agent "go to google and search test"
+
+# Convert log to workflow
+npm run wky:convert data/logs/log_XXXXXX.json
+
+# Replay without LLM
+npm run wky data/logs/log_XXXXXX.wky
 ```
