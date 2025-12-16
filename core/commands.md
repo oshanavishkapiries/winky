@@ -168,6 +168,54 @@ Features:
 
 ---
 
+## 🔌 MCP Server
+
+Connect browser automation to Claude Desktop, VS Code, or any MCP client.
+
+### Start MCP Server
+
+```bash
+npm run start:mcp
+```
+
+### Agent Mode (Your LLM drives)
+
+```
+# Claude Desktop or MCP client
+Use tool: browser_run_goal
+  goal: "Go to google and search for weather"
+
+# Your configured LLM (Gemini/OpenRouter) makes all decisions
+```
+
+### Direct Mode (You drive step-by-step)
+
+```
+# MCP client (Claude) drives each step
+1. direct_open     → Open browser at URL, get elements
+2. direct_get_state → View page HTML and elements
+3. direct_click    → Click element by UUID
+4. direct_type     → Type into input
+5. direct_scroll   → Scroll page
+6. direct_back     → Go back
+7. direct_close    → Close browser
+```
+
+**Direct Mode Tools:**
+| Tool | Description |
+|------|-------------|
+| `direct_open` | Open browser at URL |
+| `direct_get_state` | Get page HTML + elements |
+| `direct_click` | Click by element UUID |
+| `direct_type` | Type into element |
+| `direct_scroll` | Scroll page |
+| `direct_goto` | Navigate to URL |
+| `direct_back` | Go back in history |
+| `direct_screenshot` | Take screenshot |
+| `direct_close` | Close browser |
+
+---
+
 ## 💡 Examples
 
 ### Search & Extract

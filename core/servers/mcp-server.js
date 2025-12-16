@@ -1,8 +1,9 @@
 /**
  * MCP (Model Context Protocol) Server for Browser Automation
  * 
- * Exposes browser automation capabilities as MCP tools.
- * Can be connected to Claude Desktop, VS Code, or any MCP client.
+ * TWO MODES:
+ * 1. Agent Mode: browser_run_goal - Your configured LLM drives automation
+ * 2. Direct Mode: direct_* tools - MCP client LLM drives step-by-step
  * 
  * Usage:
  *   npm run start:mcp
@@ -19,18 +20,26 @@ const {
     ReadResourceRequestSchema
 } = require('@modelcontextprotocol/sdk/types.js');
 
+// CRITICAL: Suppress console.log to stderr BEFORE importing any browser modules
+// MCP uses stdio for JSON-RPC, any stdout pollution breaks the protocol
+const originalConsoleLog = console.log;
+console.log = (...args) => {
+    console.error('[mcp-redirect]', ...args);
+};
+
 const { BrowserAutomationAPI, runAgent } = require('../index');
+const { DirectBrowserController } = require('../src/direct-browser-controller');
 
 // Server state
 let currentSession = null;
-let lastPageState = null;
+let directController = null; // For direct control mode
 let actionLogs = [];
 
 // Create MCP server
 const server = new Server(
     {
         name: 'browser-automation',
-        version: '1.0.0'
+        version: '2.0.0'
     },
     {
         capabilities: {
@@ -41,39 +50,125 @@ const server = new Server(
 );
 
 // ============================================================================
-// Tools
+// Tools Definition
 // ============================================================================
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
+            // ==================== AGENT MODE (Your LLM drives) ====================
             {
                 name: 'browser_run_goal',
-                description: 'Run the browser automation agent with a natural language goal. The agent will autonomously navigate, click, type, and extract data.',
+                description: '[AGENT MODE] Run automation with configured LLM. The agent autonomously navigates, clicks, types, and extracts data based on your goal.',
                 inputSchema: {
                     type: 'object',
                     properties: {
                         goal: {
                             type: 'string',
-                            description: 'Natural language description of what to accomplish (e.g., "Go to google and search for weather")'
+                            description: 'Natural language goal (e.g., "Go to google and search for weather")'
                         },
                         headless: {
                             type: 'boolean',
-                            description: 'Run browser in headless mode (default: true)',
+                            description: 'Run browser in headless mode',
                             default: true
                         },
                         llmProvider: {
                             type: 'string',
-                            description: 'LLM provider to use (gemini, openrouter, ollama)',
+                            description: 'LLM provider (gemini, openrouter, ollama)',
                             default: 'gemini'
                         }
                     },
                     required: ['goal']
                 }
             },
+
+            // ==================== DIRECT MODE (You drive step-by-step) ====================
             {
-                name: 'browser_navigate',
-                description: 'Navigate the browser to a specific URL',
+                name: 'direct_open',
+                description: '[DIRECT MODE] Open browser and navigate to URL. Returns page state with elements you can interact with.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        url: {
+                            type: 'string',
+                            description: 'URL to navigate to'
+                        },
+                        headless: {
+                            type: 'boolean',
+                            description: 'Run in headless mode',
+                            default: false
+                        }
+                    },
+                    required: ['url']
+                }
+            },
+            {
+                name: 'direct_get_state',
+                description: '[DIRECT MODE] Get current page state: simplified HTML and interactive elements with UUIDs. Use this to understand what you can click/type.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {}
+                }
+            },
+            {
+                name: 'direct_click',
+                description: '[DIRECT MODE] Click an element by its UUID from the element list.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        elementId: {
+                            type: 'string',
+                            description: 'UUID of element to click (from direct_get_state)'
+                        }
+                    },
+                    required: ['elementId']
+                }
+            },
+            {
+                name: 'direct_type',
+                description: '[DIRECT MODE] Type text into an input element.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        elementId: {
+                            type: 'string',
+                            description: 'UUID of input element'
+                        },
+                        text: {
+                            type: 'string',
+                            description: 'Text to type'
+                        },
+                        pressEnter: {
+                            type: 'boolean',
+                            description: 'Press Enter after typing',
+                            default: false
+                        }
+                    },
+                    required: ['elementId', 'text']
+                }
+            },
+            {
+                name: 'direct_scroll',
+                description: '[DIRECT MODE] Scroll the page.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        direction: {
+                            type: 'string',
+                            description: 'Scroll direction: up, down, top, bottom',
+                            default: 'down'
+                        },
+                        amount: {
+                            type: 'number',
+                            description: 'Scroll amount in pixels',
+                            default: 500
+                        }
+                    }
+                }
+            },
+            {
+                name: 'direct_goto',
+                description: '[DIRECT MODE] Navigate to a new URL.',
                 inputSchema: {
                     type: 'object',
                     properties: {
@@ -86,48 +181,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 }
             },
             {
-                name: 'browser_extract',
-                description: 'Extract specific data from the current page or a URL',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        url: {
-                            type: 'string',
-                            description: 'URL to extract from (optional, uses current page if not provided)'
-                        },
-                        extractionGoal: {
-                            type: 'string',
-                            description: 'What data to extract (e.g., "product names and prices")'
-                        }
-                    },
-                    required: ['extractionGoal']
-                }
-            },
-            {
-                name: 'browser_start_session',
-                description: 'Start an interactive browser session for multiple operations',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        headless: {
-                            type: 'boolean',
-                            description: 'Run in headless mode',
-                            default: false
-                        }
-                    }
-                }
-            },
-            {
-                name: 'browser_close_session',
-                description: 'Close the current browser session',
+                name: 'direct_back',
+                description: '[DIRECT MODE] Go back in browser history.',
                 inputSchema: {
                     type: 'object',
                     properties: {}
                 }
             },
             {
-                name: 'browser_get_status',
-                description: 'Get the current browser session status',
+                name: 'direct_screenshot',
+                description: '[DIRECT MODE] Take a screenshot of the current page.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {}
+                }
+            },
+            {
+                name: 'direct_close',
+                description: '[DIRECT MODE] Close the browser and end the session.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {}
+                }
+            },
+            {
+                name: 'direct_status',
+                description: '[DIRECT MODE] Get current browser status and action history.',
                 inputSchema: {
                     type: 'object',
                     properties: {}
@@ -137,18 +216,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     };
 });
 
+// ============================================================================
+// Tool Handlers
+// ============================================================================
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
         switch (name) {
+            // ==================== AGENT MODE ====================
             case 'browser_run_goal': {
                 const result = await runAgent(args.goal, {
                     headless: args.headless ?? true,
                     llmProvider: args.llmProvider || 'gemini'
                 });
 
-                // Store logs
                 actionLogs.push({
                     timestamp: new Date().toISOString(),
                     tool: name,
@@ -164,81 +247,161 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 };
             }
 
-            case 'browser_navigate': {
-                const result = await runAgent(`Navigate to ${args.url}`, {
-                    headless: true
+            // ==================== DIRECT MODE ====================
+            case 'direct_open': {
+                // Close existing controller if any
+                if (directController) {
+                    await directController.close();
+                }
+
+                directController = new DirectBrowserController({
+                    headless: args.headless ?? false
                 });
+
+                const state = await directController.open(args.url);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `Browser opened at ${args.url}\n\n` +
+                            `Found ${state.elementCount} interactive elements.\n\n` +
+                            `Top elements:\n${formatElements(state.elements)}\n\n` +
+                            `Use direct_get_state for full HTML, or direct_click/direct_type to interact.`
+                    }]
+                };
+            }
+
+            case 'direct_get_state': {
+                ensureDirectController();
+                const state = await directController.getState();
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `URL: ${state.url}\n` +
+                            `Elements: ${state.elementCount}\n\n` +
+                            `Interactive Elements:\n${formatElements(state.elements)}\n\n` +
+                            `Page HTML (truncated):\n\`\`\`html\n${state.html?.substring(0, 5000) || 'No HTML'}\n\`\`\``
+                    }]
+                };
+            }
+
+            case 'direct_click': {
+                ensureDirectController();
+                const result = await directController.click(args.elementId);
 
                 return {
                     content: [{
                         type: 'text',
                         text: result.success
-                            ? `Successfully navigated to ${args.url}`
-                            : `Failed to navigate: ${result.error}`
+                            ? `Clicked element ${args.elementId}. New URL: ${result.newUrl}`
+                            : `Click failed: ${result.error}`
                     }]
                 };
             }
 
-            case 'browser_extract': {
-                const goal = args.url
-                    ? `Go to ${args.url} and extract ${args.extractionGoal}`
-                    : `Extract ${args.extractionGoal} from current page`;
-
-                const result = await runAgent(goal, { headless: true });
+            case 'direct_type': {
+                ensureDirectController();
+                const result = await directController.type(
+                    args.elementId,
+                    args.text,
+                    args.pressEnter ?? false
+                );
 
                 return {
                     content: [{
                         type: 'text',
-                        text: JSON.stringify(result, null, 2)
+                        text: result.success
+                            ? `Typed "${args.text}" into element ${args.elementId}`
+                            : `Type failed: ${result.error}`
                     }]
                 };
             }
 
-            case 'browser_start_session': {
-                if (currentSession) {
-                    await currentSession.close();
-                }
-
-                currentSession = new BrowserAutomationAPI({
-                    headless: args.headless ?? false
-                });
+            case 'direct_scroll': {
+                ensureDirectController();
+                const result = await directController.scroll(
+                    args.direction || 'down',
+                    args.amount || 500
+                );
 
                 return {
                     content: [{
                         type: 'text',
-                        text: 'Browser session started. Use browser_run_goal to execute tasks.'
+                        text: `Scrolled ${args.direction || 'down'} by ${args.amount || 500}px`
                     }]
                 };
             }
 
-            case 'browser_close_session': {
-                if (currentSession) {
-                    await currentSession.close();
-                    currentSession = null;
+            case 'direct_goto': {
+                ensureDirectController();
+                const result = await directController.goto(args.url);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `Navigated to ${args.url}`
+                    }]
+                };
+            }
+
+            case 'direct_back': {
+                ensureDirectController();
+                const result = await directController.goBack();
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `Went back. Current URL: ${result.url}`
+                    }]
+                };
+            }
+
+            case 'direct_screenshot': {
+                ensureDirectController();
+                const result = await directController.screenshot();
+
+                return {
+                    content: [{
+                        type: 'image',
+                        data: result.image,
+                        mimeType: result.mimeType
+                    }]
+                };
+            }
+
+            case 'direct_close': {
+                if (!directController) {
                     return {
                         content: [{
                             type: 'text',
-                            text: 'Browser session closed.'
+                            text: 'No active browser to close.'
                         }]
                     };
                 }
+
+                const result = await directController.close();
+                directController = null;
+
                 return {
                     content: [{
                         type: 'text',
-                        text: 'No active session to close.'
+                        text: `Browser closed. Session: ${result.sessionId}, Total actions: ${result.totalActions}`
                     }]
                 };
             }
 
-            case 'browser_get_status': {
-                const status = currentSession
-                    ? currentSession.getStatus()
-                    : { active: false, message: 'No active session' };
+            case 'direct_status': {
+                const status = directController
+                    ? directController.getStatus()
+                    : { isOpen: false, message: 'No active browser' };
+
+                const history = directController?.getHistory() || [];
 
                 return {
                     content: [{
                         type: 'text',
-                        text: JSON.stringify(status, null, 2)
+                        text: JSON.stringify({ status, recentActions: history.slice(-10) }, null, 2)
                     }]
                 };
             }
@@ -262,6 +425,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
     }
 });
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+function ensureDirectController() {
+    if (!directController || !directController.isOpen) {
+        throw new Error('No active browser. Call direct_open first.');
+    }
+}
+
+function formatElements(elements) {
+    if (!elements || elements.length === 0) return 'No elements found';
+
+    return elements.slice(0, 30).map(el => {
+        const parts = [`${el.id}: <${el.tag}>`];
+        if (el.text) parts.push(`"${el.text}"`);
+        if (el.type) parts.push(`[type=${el.type}]`);
+        if (el.placeholder) parts.push(`[placeholder="${el.placeholder}"]`);
+        if (el.href) parts.push(`[href=${el.href.substring(0, 50)}]`);
+        return parts.join(' ');
+    }).join('\n');
+}
 
 // ============================================================================
 // Resources
@@ -291,14 +477,14 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
     switch (uri) {
         case 'browser://status':
+            const status = directController?.getStatus() ||
+                currentSession?.getStatus() ||
+                { active: false };
             return {
                 contents: [{
                     uri,
                     mimeType: 'application/json',
-                    text: JSON.stringify(
-                        currentSession?.getStatus() || { active: false },
-                        null, 2
-                    )
+                    text: JSON.stringify(status, null, 2)
                 }]
             };
 
@@ -323,7 +509,9 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error('Browser Automation MCP Server running on stdio');
+    console.error('Browser Automation MCP Server v2.0 running on stdio');
+    console.error('Modes: Agent (browser_run_goal) | Direct (direct_* tools)');
 }
 
 main().catch(console.error);
+
