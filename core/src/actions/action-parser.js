@@ -20,6 +20,11 @@ function parseAction(rawAction, elementMap = {}) {
         _llmData: rawAction._llmData || null
     };
 
+    // Normalize aliases
+    if (action.action_type === 'type_text') action.action_type = ActionType.INPUT_TEXT;
+    if (action.action_type === 'click_element') action.action_type = ActionType.CLICK;
+    if (action.action_type === 'scroll_page') action.action_type = ActionType.SCROLL;
+
     // Validate action type
     if (!Object.values(ActionType).includes(action.action_type)) {
         console.warn(`⚠️ Unknown action type: ${action.action_type}, defaulting to wait`);
