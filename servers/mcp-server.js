@@ -31,9 +31,13 @@ console.log = (...args) => {
     console.error('[mcp-redirect]', ...args);
 };
 
-const { BrowserAutomationAPI, runAgent } = require('../core');
+const { runAgent } = require('../core');
 const { DirectBrowserController } = require('../core/src/browser/direct-browser-controller');
 const { registry } = require('../core/src/actions/action-registry');
+const tools = require('./mcp-tools.json');
+
+// Ensure plugins are loaded for execution (even if tools are static, we need registry for execution)
+registry.loadPlugins();
 
 // Server state
 let currentSession = null;
@@ -59,92 +63,6 @@ const server = new Server(
 // ============================================================================
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-    // 1. Static Agent Tools
-    const tools = [
-        {
-            name: 'browser_run_goal',
-            description: '[AGENT MODE] Run automation with configured LLM. The agent autonomously navigates, clicks, types, and extracts data based on your goal.',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    goal: {
-                        type: 'string',
-                        description: 'Natural language goal (e.g., "Go to google and search for weather")'
-                    },
-                    headless: {
-                        type: 'boolean',
-                        description: 'Run browser in headless mode',
-                        default: true
-                    },
-                    llmProvider: {
-                        type: 'string',
-                        description: 'LLM provider (gemini, openrouter, ollama)',
-                        default: 'gemini'
-                    }
-                },
-                required: ['goal']
-            }
-        },
-        // 2. Static Direct Tools (Session Management)
-        {
-            name: 'direct_open',
-            description: '[DIRECT MODE] Open browser and navigate to URL. Returns page state with elements you can interact with.',
-            inputSchema: {
-                type: 'object',
-                properties: {
-                    url: {
-                        type: 'string',
-                        description: 'URL to navigate to'
-                    },
-                    headless: {
-                        type: 'boolean',
-                        description: 'Run in headless mode',
-                        default: false
-                    }
-                },
-                required: ['url']
-            }
-        },
-        {
-            name: 'direct_get_state',
-            description: '[DIRECT MODE] Get current page state: simplified HTML and interactive elements with UUIDs. Use this to understand what you can click/type.',
-            inputSchema: {
-                type: 'object',
-                properties: {}
-            }
-        },
-        {
-            name: 'direct_status',
-            description: '[DIRECT MODE] Get current browser status and action history.',
-            inputSchema: {
-                type: 'object',
-                properties: {}
-            }
-        },
-        {
-            name: 'direct_close',
-            description: '[DIRECT MODE] Close the browser and end the session.',
-            inputSchema: {
-                type: 'object',
-                properties: {}
-            }
-        }
-    ];
-
-    // 3. Dynamic Direct Tools (From Registry)
-    const registeredActions = registry.getAll();
-
-    for (const [name, ActionClass] of registeredActions) {
-        // Skip internal/meta actions if needed, or specific exclusions
-        if (['extract', 'complete', 'terminate'].includes(name)) continue;
-
-        tools.push({
-            name: `direct_${name}`,
-            description: `[DIRECT MODE] ${ActionClass.description || name}`,
-            inputSchema: ActionClass.inputSchema || { type: 'object', properties: {} }
-        });
-    }
-
     return { tools };
 });
 

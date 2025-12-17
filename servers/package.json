@@ -7,7 +7,8 @@
         "start": "node http-server.js",
         "start:http": "node http-server.js",
         "start:mcp": "node mcp-server.js",
-        "watch:mcp": "npx nodemon mcp-server.js"
+        "watch:mcp": "npx nodemon mcp-server.js",
+        "generate:tools": "node ../generate-tools.js"
     },
     "keywords": [
         "mcp",

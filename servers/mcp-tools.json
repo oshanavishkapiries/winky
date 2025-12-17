@@ -1,0 +1,239 @@
+[
+  {
+    "name": "browser_run_goal",
+    "description": "[AGENT MODE] Run automation with configured LLM. The agent autonomously navigates, clicks, types, and extracts data based on your goal.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "goal": {
+          "type": "string",
+          "description": "Natural language goal (e.g., \"Go to google and search for weather\")"
+        },
+        "headless": {
+          "type": "boolean",
+          "description": "Run browser in headless mode",
+          "default": true
+        },
+        "llmProvider": {
+          "type": "string",
+          "description": "LLM provider (gemini, openrouter, ollama)",
+          "default": "gemini"
+        }
+      },
+      "required": [
+        "goal"
+      ]
+    }
+  },
+  {
+    "name": "direct_open",
+    "description": "[DIRECT MODE] Open browser and navigate to URL. Returns page state with elements you can interact with.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to navigate to"
+        },
+        "headless": {
+          "type": "boolean",
+          "description": "Run in headless mode",
+          "default": false
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "direct_get_state",
+    "description": "[DIRECT MODE] Get current page state: simplified HTML and interactive elements with UUIDs. Use this to understand what you can click/type.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "direct_status",
+    "description": "[DIRECT MODE] Get current browser status and action history.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "direct_close",
+    "description": "[DIRECT MODE] Close the browser and end the session.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "direct_click",
+    "description": "[DIRECT MODE] Click on an element",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "element_id": {
+          "type": "string",
+          "description": "UUID of the element to click"
+        }
+      },
+      "required": [
+        "element_id"
+      ]
+    }
+  },
+  {
+    "name": "direct_goto_url",
+    "description": "[DIRECT MODE] Navigate to a URL",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to navigate to"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "direct_hover",
+    "description": "[DIRECT MODE] Hover over an element",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "element_id": {
+          "type": "string",
+          "description": "UUID of the element to hover"
+        }
+      },
+      "required": [
+        "element_id"
+      ]
+    }
+  },
+  {
+    "name": "direct_input_text",
+    "description": "[DIRECT MODE] Type text into an input field",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "element_id": {
+          "type": "string",
+          "description": "UUID of the input element"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        },
+        "pressEnter": {
+          "type": "boolean",
+          "description": "Press Enter after typing",
+          "default": false
+        }
+      },
+      "required": [
+        "element_id",
+        "text"
+      ]
+    }
+  },
+  {
+    "name": "direct_keypress",
+    "description": "[DIRECT MODE] Press a keyboard key (Enter, Escape, Tab, etc)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Key to press (Enter, Tab, Escape, etc)"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "direct_screenshot",
+    "description": "[DIRECT MODE] Take a screenshot of the current page and save it to the logs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Optional name for the screenshot file"
+        },
+        "fullPage": {
+          "type": "boolean",
+          "description": "Take full page screenshot",
+          "default": false
+        }
+      }
+    }
+  },
+  {
+    "name": "direct_scroll",
+    "description": "[DIRECT MODE] Scroll the page up, down, or to an element",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "description": "Scroll direction (up, down, top, bottom)",
+          "default": "down"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount to scroll in pixels",
+          "default": 500
+        },
+        "element_id": {
+          "type": "string",
+          "description": "Optional element UUID to scroll into view"
+        }
+      }
+    }
+  },
+  {
+    "name": "direct_select_option",
+    "description": "[DIRECT MODE] Select an option from a dropdown",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "element_id": {
+          "type": "string",
+          "description": "UUID of the select element"
+        },
+        "value": {
+          "type": "string",
+          "description": "Value to select"
+        }
+      },
+      "required": [
+        "element_id",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "direct_wait",
+    "description": "[DIRECT MODE] Wait for a specified duration in milliseconds",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Duration in milliseconds",
+          "default": 1000
+        }
+      }
+    }
+  }
+]
