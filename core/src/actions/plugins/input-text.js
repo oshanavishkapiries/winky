@@ -8,6 +8,25 @@ class InputTextAction extends BaseAction {
     static type = 'input_text';
     static requiresElement = true;
     static description = 'Type text into an input field';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            element_id: {
+                type: 'string',
+                description: 'UUID of the input element'
+            },
+            text: {
+                type: 'string',
+                description: 'Text to type'
+            },
+            pressEnter: {
+                type: 'boolean',
+                description: 'Press Enter after typing',
+                default: false
+            }
+        },
+        required: ['element_id', 'text']
+    };
 
     async execute({ element_id, text }) {
         try {

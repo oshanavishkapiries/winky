@@ -7,6 +7,16 @@ class ClickAction extends BaseAction {
     static type = 'click';
     static requiresElement = true;
     static description = 'Click on an element';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            element_id: {
+                type: 'string',
+                description: 'UUID of the element to click'
+            }
+        },
+        required: ['element_id']
+    };
 
     async execute({ element_id }) {
         let element;

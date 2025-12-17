@@ -9,6 +9,20 @@ class ScreenshotAction extends BaseAction {
     static type = 'screenshot';
     static requiresElement = false;
     static description = 'Take a screenshot of the current page and save it to the logs.';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            name: {
+                type: 'string',
+                description: 'Optional name for the screenshot file'
+            },
+            fullPage: {
+                type: 'boolean',
+                description: 'Take full page screenshot',
+                default: false
+            }
+        }
+    };
 
     /**
      * Execute screenshot action

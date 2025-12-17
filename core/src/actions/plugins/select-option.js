@@ -7,6 +7,20 @@ class SelectOptionAction extends BaseAction {
     static type = 'select_option';
     static requiresElement = true;
     static description = 'Select an option from a dropdown';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            element_id: {
+                type: 'string',
+                description: 'UUID of the select element'
+            },
+            value: {
+                type: 'string',
+                description: 'Value to select'
+            }
+        },
+        required: ['element_id', 'value']
+    };
 
     async execute({ element_id, value }) {
         try {

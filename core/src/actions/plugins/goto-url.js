@@ -7,6 +7,16 @@ class GotoUrlAction extends BaseAction {
     static type = 'goto_url';
     static requiresElement = false;
     static description = 'Navigate to a URL';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            url: {
+                type: 'string',
+                description: 'URL to navigate to'
+            }
+        },
+        required: ['url']
+    };
 
     async execute({ url }) {
         try {

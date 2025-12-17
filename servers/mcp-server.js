@@ -33,6 +33,7 @@ console.log = (...args) => {
 
 const { BrowserAutomationAPI, runAgent } = require('../core');
 const { DirectBrowserController } = require('../core/src/browser/direct-browser-controller');
+const { registry } = require('../core/src/actions/action-registry');
 
 // Server state
 let currentSession = null;
@@ -58,166 +59,93 @@ const server = new Server(
 // ============================================================================
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-        tools: [
-            // ==================== AGENT MODE (Your LLM drives) ====================
-            {
-                name: 'browser_run_goal',
-                description: '[AGENT MODE] Run automation with configured LLM. The agent autonomously navigates, clicks, types, and extracts data based on your goal.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        goal: {
-                            type: 'string',
-                            description: 'Natural language goal (e.g., "Go to google and search for weather")'
-                        },
-                        headless: {
-                            type: 'boolean',
-                            description: 'Run browser in headless mode',
-                            default: true
-                        },
-                        llmProvider: {
-                            type: 'string',
-                            description: 'LLM provider (gemini, openrouter, ollama)',
-                            default: 'gemini'
-                        }
+    // 1. Static Agent Tools
+    const tools = [
+        {
+            name: 'browser_run_goal',
+            description: '[AGENT MODE] Run automation with configured LLM. The agent autonomously navigates, clicks, types, and extracts data based on your goal.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    goal: {
+                        type: 'string',
+                        description: 'Natural language goal (e.g., "Go to google and search for weather")'
                     },
-                    required: ['goal']
-                }
-            },
-
-            // ==================== DIRECT MODE (You drive step-by-step) ====================
-            {
-                name: 'direct_open',
-                description: '[DIRECT MODE] Open browser and navigate to URL. Returns page state with elements you can interact with.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        url: {
-                            type: 'string',
-                            description: 'URL to navigate to'
-                        },
-                        headless: {
-                            type: 'boolean',
-                            description: 'Run in headless mode',
-                            default: false
-                        }
+                    headless: {
+                        type: 'boolean',
+                        description: 'Run browser in headless mode',
+                        default: true
                     },
-                    required: ['url']
-                }
-            },
-            {
-                name: 'direct_get_state',
-                description: '[DIRECT MODE] Get current page state: simplified HTML and interactive elements with UUIDs. Use this to understand what you can click/type.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {}
-                }
-            },
-            {
-                name: 'direct_click',
-                description: '[DIRECT MODE] Click an element by its UUID from the element list.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        elementId: {
-                            type: 'string',
-                            description: 'UUID of element to click (from direct_get_state)'
-                        }
-                    },
-                    required: ['elementId']
-                }
-            },
-            {
-                name: 'direct_type',
-                description: '[DIRECT MODE] Type text into an input element.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        elementId: {
-                            type: 'string',
-                            description: 'UUID of input element'
-                        },
-                        text: {
-                            type: 'string',
-                            description: 'Text to type'
-                        },
-                        pressEnter: {
-                            type: 'boolean',
-                            description: 'Press Enter after typing',
-                            default: false
-                        }
-                    },
-                    required: ['elementId', 'text']
-                }
-            },
-            {
-                name: 'direct_scroll',
-                description: '[DIRECT MODE] Scroll the page.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        direction: {
-                            type: 'string',
-                            description: 'Scroll direction: up, down, top, bottom',
-                            default: 'down'
-                        },
-                        amount: {
-                            type: 'number',
-                            description: 'Scroll amount in pixels',
-                            default: 500
-                        }
+                    llmProvider: {
+                        type: 'string',
+                        description: 'LLM provider (gemini, openrouter, ollama)',
+                        default: 'gemini'
                     }
-                }
-            },
-            {
-                name: 'direct_goto',
-                description: '[DIRECT MODE] Navigate to a new URL.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        url: {
-                            type: 'string',
-                            description: 'URL to navigate to'
-                        }
-                    },
-                    required: ['url']
-                }
-            },
-            {
-                name: 'direct_back',
-                description: '[DIRECT MODE] Go back in browser history.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {}
-                }
-            },
-            {
-                name: 'direct_screenshot',
-                description: '[DIRECT MODE] Take a screenshot of the current page.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {}
-                }
-            },
-            {
-                name: 'direct_close',
-                description: '[DIRECT MODE] Close the browser and end the session.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {}
-                }
-            },
-            {
-                name: 'direct_status',
-                description: '[DIRECT MODE] Get current browser status and action history.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {}
-                }
+                },
+                required: ['goal']
             }
-        ]
-    };
+        },
+        // 2. Static Direct Tools (Session Management)
+        {
+            name: 'direct_open',
+            description: '[DIRECT MODE] Open browser and navigate to URL. Returns page state with elements you can interact with.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    url: {
+                        type: 'string',
+                        description: 'URL to navigate to'
+                    },
+                    headless: {
+                        type: 'boolean',
+                        description: 'Run in headless mode',
+                        default: false
+                    }
+                },
+                required: ['url']
+            }
+        },
+        {
+            name: 'direct_get_state',
+            description: '[DIRECT MODE] Get current page state: simplified HTML and interactive elements with UUIDs. Use this to understand what you can click/type.',
+            inputSchema: {
+                type: 'object',
+                properties: {}
+            }
+        },
+        {
+            name: 'direct_status',
+            description: '[DIRECT MODE] Get current browser status and action history.',
+            inputSchema: {
+                type: 'object',
+                properties: {}
+            }
+        },
+        {
+            name: 'direct_close',
+            description: '[DIRECT MODE] Close the browser and end the session.',
+            inputSchema: {
+                type: 'object',
+                properties: {}
+            }
+        }
+    ];
+
+    // 3. Dynamic Direct Tools (From Registry)
+    const registeredActions = registry.getAll();
+
+    for (const [name, ActionClass] of registeredActions) {
+        // Skip internal/meta actions if needed, or specific exclusions
+        if (['extract', 'complete', 'terminate'].includes(name)) continue;
+
+        tools.push({
+            name: `direct_${name}`,
+            description: `[DIRECT MODE] ${ActionClass.description || name}`,
+            inputSchema: ActionClass.inputSchema || { type: 'object', properties: {} }
+        });
+    }
+
+    return { tools };
 });
 
 // ============================================================================
@@ -228,42 +156,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
     try {
+        // 1. Agent Mode Handler
+        if (name === 'browser_run_goal') {
+            const result = await runAgent(args.goal, {
+                headless: args.headless ?? true,
+                llmProvider: args.llmProvider || 'gemini'
+            });
+
+            actionLogs.push({
+                timestamp: new Date().toISOString(),
+                tool: name,
+                goal: args.goal,
+                result: result.success
+            });
+
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        }
+
+        // 2. Static Direct Tools Handlers
         switch (name) {
-            // ==================== AGENT MODE ====================
-            case 'browser_run_goal': {
-                const result = await runAgent(args.goal, {
-                    headless: args.headless ?? true,
-                    llmProvider: args.llmProvider || 'gemini'
-                });
-
-                actionLogs.push({
-                    timestamp: new Date().toISOString(),
-                    tool: name,
-                    goal: args.goal,
-                    result: result.success
-                });
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: JSON.stringify(result, null, 2)
-                    }]
-                };
-            }
-
-            // ==================== DIRECT MODE ====================
             case 'direct_open': {
-                // Close existing controller if any
                 if (directController) {
                     await directController.close();
                 }
-
                 directController = new DirectBrowserController({
                     headless: args.headless ?? false
                 });
-
                 const state = await directController.open(args.url);
-
                 return {
                     content: [{
                         type: 'text',
@@ -274,11 +198,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     }]
                 };
             }
-
             case 'direct_get_state': {
                 ensureDirectController();
                 const state = await directController.getState();
-
                 return {
                     content: [{
                         type: 'text',
@@ -289,129 +211,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     }]
                 };
             }
-
-            case 'direct_click': {
-                ensureDirectController();
-                const result = await directController.click(args.elementId);
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: result.success
-                            ? `Clicked element ${args.elementId}. New URL: ${result.newUrl}`
-                            : `Click failed: ${result.error}`
-                    }]
-                };
-            }
-
-            case 'direct_type': {
-                ensureDirectController();
-                const result = await directController.type(
-                    args.elementId,
-                    args.text,
-                    args.pressEnter ?? false
-                );
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: result.success
-                            ? `Typed "${args.text}" into element ${args.elementId}`
-                            : `Type failed: ${result.error}`
-                    }]
-                };
-            }
-
-            case 'direct_scroll': {
-                ensureDirectController();
-                const result = await directController.scroll(
-                    args.direction || 'down',
-                    args.amount || 500
-                );
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: `Scrolled ${args.direction || 'down'} by ${args.amount || 500}px`
-                    }]
-                };
-            }
-
-            case 'direct_goto': {
-                ensureDirectController();
-                const result = await directController.goto(args.url);
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: `Navigated to ${args.url}`
-                    }]
-                };
-            }
-
-            case 'direct_back': {
-                ensureDirectController();
-                const result = await directController.goBack();
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: `Went back. Current URL: ${result.url}`
-                    }]
-                };
-            }
-
-            case 'direct_screenshot': {
-                ensureDirectController();
-                const result = await directController.screenshot();
-
-                return {
-                    content: [{
-                        type: 'image',
-                        data: result.image,
-                        mimeType: result.mimeType
-                    }]
-                };
-            }
-
-            case 'direct_analyze': {
-                ensureDirectController();
-                return {
-                    content: [{
-                        type: 'text',
-                        text: JSON.stringify(await directController.analyze(), null, 2)
-                    }]
-                };
-            }
-
-            case 'direct_close': {
-                if (!directController) {
-                    return {
-                        content: [{
-                            type: 'text',
-                            text: 'No active browser to close.'
-                        }]
-                    };
-                }
-
-                const result = await directController.close();
-                directController = null;
-
-                return {
-                    content: [{
-                        type: 'text',
-                        text: `Browser closed. Session: ${result.sessionId}, Total actions: ${result.totalActions}`
-                    }]
-                };
-            }
-
             case 'direct_status': {
                 const status = directController
                     ? directController.getStatus()
                     : { isOpen: false, message: 'No active browser' };
-
                 const history = directController?.getHistory() || [];
-
                 return {
                     content: [{
                         type: 'text',
@@ -419,16 +223,57 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     }]
                 };
             }
-
-            default:
+            case 'direct_close': {
+                if (!directController) {
+                    return { content: [{ type: 'text', text: 'No active browser to close.' }] };
+                }
+                const result = await directController.close();
+                directController = null;
                 return {
                     content: [{
                         type: 'text',
-                        text: `Unknown tool: ${name}`
-                    }],
-                    isError: true
+                        text: `Browser closed. Session: ${result.sessionId}, Total actions: ${result.totalActions}`
+                    }]
                 };
+            }
         }
+
+        // 3. Dynamic Direct Tools Handler
+        if (name.startsWith('direct_')) {
+            ensureDirectController();
+
+            // Extract action type (remove 'direct_' prefix)
+            const actionType = name.replace('direct_', '');
+
+            // Validate action exists
+            if (!registry.get(actionType)) {
+                throw new Error(`Unknown tool: ${name}`);
+            }
+
+            // Execute via controller's executor
+            // We need to pass the full action object expected by ActionExecutor
+            const action = {
+                action_type: actionType,
+                ...args
+            };
+
+            const result = await directController.actionExecutor.execute(action);
+
+            // If action was successful, refresh state if needed (usually handled by next tool call)
+            // But for things like click/goto we might want to return context
+
+            return {
+                content: [{
+                    type: 'text',
+                    text: result.success
+                        ? `Action ${actionType} successful.`
+                        : `Action ${actionType} failed: ${result.error}`
+                }]
+            };
+        }
+
+        throw new Error(`Unknown tool: ${name}`);
+
     } catch (error) {
         return {
             content: [{

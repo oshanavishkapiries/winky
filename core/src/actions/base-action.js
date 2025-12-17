@@ -10,6 +10,10 @@ class BaseAction {
     static isCoordinate = false;
     static isTerminal = false;
     static description = 'Base action';
+    static inputSchema = {
+        type: 'object',
+        properties: {}
+    };
 
     constructor(page, elementMap = {}) {
         this.page = page;

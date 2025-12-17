@@ -7,6 +7,25 @@ class ScrollAction extends BaseAction {
     static type = 'scroll';
     static requiresElement = false;
     static description = 'Scroll the page up, down, or to an element';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            direction: {
+                type: 'string',
+                description: 'Scroll direction (up, down, top, bottom)',
+                default: 'down'
+            },
+            amount: {
+                type: 'number',
+                description: 'Amount to scroll in pixels',
+                default: 500
+            },
+            element_id: {
+                type: 'string',
+                description: 'Optional element UUID to scroll into view'
+            }
+        }
+    };
 
     async execute({ direction, amount, element_id }) {
         try {

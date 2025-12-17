@@ -7,6 +7,16 @@ class KeypressAction extends BaseAction {
     static type = 'keypress';
     static requiresElement = false;
     static description = 'Press a keyboard key (Enter, Escape, Tab, etc)';
+    static inputSchema = {
+        type: 'object',
+        properties: {
+            key: {
+                type: 'string',
+                description: 'Key to press (Enter, Tab, Escape, etc)'
+            }
+        },
+        required: ['key']
+    };
 
     async execute({ key }) {
         try {
