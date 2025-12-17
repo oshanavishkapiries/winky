@@ -39,10 +39,22 @@ Commands inside CLI:
 
 Run the automation core as a service.
 
+Setup (First Time Only):
+
+```bash
+cd servers
+npm install
+cd ..
+```
+
 Start Server:
 
 ```bash
+# Option A: From core directory (using helper)
 npm run start:http
+
+# Option B: From servers directory
+cd servers && npm start
 ```
 
 API Endpoints:
@@ -81,11 +93,51 @@ POST /api/run
 ## 4. MCP Server (AI Agent Integration)
 
 Connect to Claude Desktop, Cursor, or other MCP clients.
+(Ensure you have run `npm install` in `servers/` first)
 
 Start Server:
 
 ```bash
+# Option A: From core directory
 npm run start:mcp
+
+# Option B: From servers directory
+cd servers && npm run start:mcp
+```
+
+### Client Configuration Example
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "browser-automation": {
+      "command": "node",
+      "args": ["D:/project-175/servers/mcp-server.js"],
+      "env": {
+        "CHROME_PATH": "C:/Program Files/Google/Chrome/Application/chrome.exe"
+      }
+    }
+  }
+}
+```
+
+Opencode support one `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "browser-automation": {
+      "type": "local",
+      "enabled": true,
+      "command": ["node", "D:/project-175/servers/mcp-server.js"],
+      "environment": {
+        "CHROME_PATH": "C:/Program Files/Google/Chrome/Application/chrome.exe"
+      }
+    }
+  }
+}
 ```
 
 ### Protocol Details
