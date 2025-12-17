@@ -38,9 +38,24 @@ class InputTextAction extends BaseAction {
                 await element.focus().catch(() => { });
             }
 
-            // Clear and fill
-            await element.fill('', { timeout: 5000 });
-            await element.fill(text || '', { timeout: 5000 });
+            // Clear existing text
+            try {
+                await element.fill('');
+            } catch (e) {
+                // Ignore clear error, proceed to type
+            }
+
+            // Human-like typing with random delay
+            if (text) {
+                try {
+                    // Random delay between 30ms and 100ms
+                    const delay = Math.floor(Math.random() * 70) + 30;
+                    await element.pressSequentially(text, { delay });
+                } catch (e) {
+                    console.log('  [input_text] Typing failed, falling back to instant fill');
+                    await element.fill(text);
+                }
+            }
 
             // Determine if we should press Enter after input
             const isSearch = this.isSearchInput(elementInfo) || await this.looksLikeSearch(element);

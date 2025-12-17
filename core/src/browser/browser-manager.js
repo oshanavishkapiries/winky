@@ -4,11 +4,12 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = require('playwright-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+// const { chromium } = require('playwright-extra');
+// const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const { chromium } = require('playwright');
 
 // Use stealth plugin to avoid bot detection
-chromium.use(StealthPlugin());
+// chromium.use(StealthPlugin());
 
 class BrowserManager {
     constructor(config = {}) {

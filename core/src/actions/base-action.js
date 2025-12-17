@@ -42,28 +42,54 @@ class BaseAction {
 
         let element = null;
 
-        // Primary method: XPath (since data-uuid only exists in simplified HTML, not on actual page)
+        // 1. Primary method: Semantic Locator (from Accessibility Tree)
+        if (elementInfo.locator) {
+            try {
+                const { role, name } = elementInfo.locator;
+                // Map generic roles or handle edge cases if needed
+                if (role && name) {
+                    element = this.page.getByRole(role, { name, exact: true }).first();
+
+                    // Verify it matches (count > 0)
+                    if (await element.count() === 0) {
+                        // Try non-exact match
+                        element = this.page.getByRole(role, { name, exact: false }).first();
+                    }
+
+                    if (await element.count() > 0) {
+                        return element;
+                    }
+                }
+            } catch (e) {
+                console.log(`  [BaseAction] Semantic locator failed for ${elementId}: ${e.message}`);
+            }
+        }
+
+        // 2. Secondary method: XPath (Legacy / Fallback)
         if (elementInfo.xpath) {
             try {
                 // Use evaluate for XPath
-                element = await this.page.locator(`xpath=${elementInfo.xpath}`).first().elementHandle();
+                const locator = this.page.locator(`xpath=${elementInfo.xpath}`).first();
+                if (await locator.count() > 0) {
+                    return locator;
+                }
             } catch (e) {
                 // XPath might be invalid or element not found
             }
         }
 
-        // Fallback: Try by common attributes
+        // 3. Fallback: Try by common attributes
         if (!element && elementInfo.name) {
-            element = await this.page.$(`[name="${elementInfo.name}"]`);
+            element = this.page.locator(`[name="${elementInfo.name}"]`).first();
         }
         if (!element && elementInfo['aria-label']) {
-            element = await this.page.$(`[aria-label="${elementInfo['aria-label']}"]`);
+            element = this.page.getByLabel(elementInfo['aria-label']).first();
         }
-        if (!element && elementInfo.type && elementInfo.tag === 'input') {
-            element = await this.page.$(`input[type="${elementInfo.type}"]`);
+        if (!element && elementInfo.placeholder) {
+            element = this.page.getByPlaceholder(elementInfo.placeholder).first();
         }
 
-        if (!element) {
+        if (!element || await element.count() === 0) {
             throw new Error(`Could not locate element: ${elementId}`);
         }
 

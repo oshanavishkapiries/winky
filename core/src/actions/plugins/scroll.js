@@ -29,12 +29,15 @@ class ScrollAction extends BaseAction {
             const scroll = scrollMap[direction?.toLowerCase()] || scrollAmount;
 
             if (scroll === 'top') {
-                await this.page.evaluate(() => window.scrollTo(0, 0));
+                await this.page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
             } else if (scroll === 'bottom') {
-                await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+                await this.page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
             } else {
-                await this.page.evaluate((y) => window.scrollBy(0, y), scroll);
+                await this.page.evaluate((y) => window.scrollBy({ top: y, behavior: 'smooth' }), scroll);
             }
+
+            // Wait for scroll to complete visually
+            await this.page.waitForTimeout(500);
 
             return { success: true };
         } catch (error) {
