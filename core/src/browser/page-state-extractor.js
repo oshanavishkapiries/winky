@@ -3,7 +3,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { simplifyHTML } = require('./scripts/simplify-html');
+const { simplifyHTML } = require('../scripts/simplify-html');
 
 class PageStateExtractor {
     constructor(browserManager, options = {}) {

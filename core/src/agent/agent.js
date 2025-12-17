@@ -6,9 +6,9 @@
  * - Memory: Short-term, working, and long-term memory
  * - Progress tracking: Loops and step progress
  */
-const { parseAction, isTerminal } = require('./actions');
+const { parseAction, isTerminal } = require('../actions');
 const { AgentFactory } = require('./agent-factory');
-const { config } = require('./llm');
+const { config } = require('../llm');
 const { AgentMemory } = require('./agent-memory');
 const { GoalPlanner } = require('./goal-planner');
 const { ActionVerifier } = require('./action-verifier');

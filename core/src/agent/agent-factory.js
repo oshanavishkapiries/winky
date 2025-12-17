@@ -3,15 +3,15 @@
  * Open for extension: Add new managers without modifying Agent
  */
 const path = require('path');
-const { config } = require('./llm');
-const { createAdapter } = require('./llm');
-const { BrowserManager } = require('./browser-manager');
-const { CookieManager } = require('./cookie-manager');
-const { SessionManager } = require('./session-manager');
-const { PageStateExtractor } = require('./page-state-extractor');
-const { ActionExecutor } = require('./actions');
-const { AgentTUI } = require('./scripts/tui');
-const { ElementHighlighter } = require('./scripts/highlighter');
+const { config } = require('../llm');
+const { createAdapter } = require('../llm');
+const { BrowserManager } = require('../browser/browser-manager');
+const { CookieManager } = require('../browser/cookie-manager');
+const { SessionManager } = require('../session-manager');
+const { PageStateExtractor } = require('../browser/page-state-extractor');
+const { ActionExecutor } = require('../actions');
+const { AgentTUI } = require('../scripts/tui');
+const { ElementHighlighter } = require('../scripts/highlighter');
 
 class AgentFactory {
     /**

@@ -17,8 +17,8 @@ const path = require('path');
 const { BrowserManager } = require('./browser-manager');
 const { CookieManager } = require('./cookie-manager');
 const { PageStateExtractor } = require('./page-state-extractor');
-const { ActionExecutor } = require('./actions/action-executor');
-const { config } = require('./llm/config');
+const { ActionExecutor } = require('../actions/action-executor');
+const { config } = require('../llm/config');
 
 class DirectBrowserController {
     constructor(options = {}) {

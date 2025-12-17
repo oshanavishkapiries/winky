@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { config } = require('./llm/config');
-const { BrowserManager } = require('./browser-manager');
+const { BrowserManager } = require('./browser/browser-manager');
 const { ActionExecutor } = require('./actions/action-executor');
 const { SessionManager } = require('./session-manager');
 

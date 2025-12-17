@@ -32,7 +32,7 @@ console.log = (...args) => {
 };
 
 const { BrowserAutomationAPI, runAgent } = require('../index');
-const { DirectBrowserController } = require('../src/direct-browser-controller');
+const { DirectBrowserController } = require('../src/browser/direct-browser-controller');
 
 // Server state
 let currentSession = null;

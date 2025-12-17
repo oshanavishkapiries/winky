@@ -4,11 +4,10 @@
  * Provides a clean, Promise-based interface for browser automation.
  * Suitable for integration with HTTP servers, MCP servers, etc.
  */
-const path = require('path');
-const { Agent, AgentFactory } = require('./agent');
-const { WkyExecutor } = require('./wky-executor');
-const { DirectBrowserController } = require('./direct-browser-controller');
 
+const { Agent, AgentFactory } = require('./agent/agent');
+const { WkyExecutor } = require('./wky-executor');
+const { DirectBrowserController } = require('./browser/direct-browser-controller');
 class BrowserAutomationAPI {
     /**
      * Create a new API instance

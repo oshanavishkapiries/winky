@@ -16,13 +16,13 @@
  */
 
 // Core Agent
-const { Agent, AgentFactory } = require('./src/agent');
+const { Agent, AgentFactory } = require('./src/agent/agent');
 
 // Managers
-const { BrowserManager } = require('./src/browser-manager');
-const { CookieManager } = require('./src/cookie-manager');
+const { BrowserManager } = require('./src/browser/browser-manager');
+const { CookieManager } = require('./src/browser/cookie-manager');
 const { SessionManager } = require('./src/session-manager');
-const { PageStateExtractor } = require('./src/page-state-extractor');
+const { PageStateExtractor } = require('./src/browser/page-state-extractor');
 
 // LLM
 const {
@@ -47,8 +47,8 @@ const {
 } = require('./src/actions');
 
 // Goal Planning & Memory
-const { GoalPlanner } = require('./src/goal-planner');
-const { AgentMemory } = require('./src/agent-memory');
+const { GoalPlanner } = require('./src/agent/goal-planner');
+const { AgentMemory } = require('./src/agent/agent-memory');
 
 // Workflow
 const { WkyExecutor } = require('./src/wky-executor');

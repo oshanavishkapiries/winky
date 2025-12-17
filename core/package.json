@@ -4,7 +4,7 @@
   "description": "Browser automation agent with HTTP and MCP server support",
   "main": "index.js",
   "scripts": {
-    "agent": "node src/agent.js",
+    "agent": "node src/agent/agent.js",
     "wky": "node src/wky-executor.js",
     "wky:convert": "node src/scripts/wky-convert.js",
     "simplify": "node src/scripts/simplify-html.js",
