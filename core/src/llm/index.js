@@ -4,10 +4,10 @@
  */
 const { config, validateConfig } = require('./config');
 const { BaseLLMAdapter } = require('./base-adapter');
-const { GeminiAdapter } = require('./gemini-adapter');
-const { CerebrasAdapter } = require('./cerebras-adapter');
-const { OllamaAdapter } = require('./ollama-adapter');
-const { OpenRouterAdapter } = require('./openrouter-adapter');
+const { GeminiAdapter } = require('./adapters/gemini-adapter');
+const { CerebrasAdapter } = require('./adapters/cerebras-adapter');
+const { OllamaAdapter } = require('./adapters/ollama-adapter');
+const { OpenRouterAdapter } = require('./adapters/openrouter-adapter');
 
 /**
  * Create an LLM adapter based on provider name

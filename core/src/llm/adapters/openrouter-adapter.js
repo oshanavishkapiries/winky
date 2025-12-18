@@ -3,7 +3,7 @@
  * Implementation of BaseLLMAdapter for OpenRouter API
  * OpenRouter provides access to multiple LLM providers through a unified API
  */
-const { BaseLLMAdapter } = require('./base-adapter');
+const { BaseLLMAdapter } = require('../base-adapter');
 
 class OpenRouterAdapter extends BaseLLMAdapter {
     constructor(config) {

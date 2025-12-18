@@ -161,6 +161,41 @@
     }
   },
   {
+    "name": "direct_monitor_network",
+    "description": "[DIRECT MODE] Capture and analyze network traffic (API, XHR, GraphQL).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "start",
+            "stop",
+            "clear",
+            "get"
+          ],
+          "description": "Command to execute",
+          "default": "get"
+        },
+        "filter": {
+          "type": "string",
+          "enum": [
+            "all",
+            "xhr",
+            "doc",
+            "image",
+            "graphql"
+          ],
+          "description": "Filter for traffic retrieval (default: xhr)",
+          "default": "xhr"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
     "name": "direct_mouse_click",
     "description": "[DIRECT MODE] Click the mouse at specific X,Y coordinates.",
     "inputSchema": {

@@ -3,7 +3,7 @@
  * Implementation of BaseLLMAdapter for Anthropic Claude
  */
 const Anthropic = require('@anthropic-ai/sdk').default;
-const { BaseLLMAdapter } = require('./base-adapter');
+const { BaseLLMAdapter } = require('../base-adapter');
 
 class ClaudeAdapter extends BaseLLMAdapter {
     constructor(config) {

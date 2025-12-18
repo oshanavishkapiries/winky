@@ -7,6 +7,7 @@ const fs = require('fs');
 // const { chromium } = require('playwright-extra');
 // const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { chromium } = require('playwright');
+const { NetworkMonitor } = require('./network-monitor');
 
 // Use stealth plugin to avoid bot detection
 // chromium.use(StealthPlugin());
@@ -68,6 +69,10 @@ class BrowserManager {
 
         // Get or create page
         this.page = this.context.pages()[0] || await this.context.newPage();
+
+        // Attach network monitor
+        this.networkMonitor = new NetworkMonitor(this.page);
+        this.page._networkMonitor = this.networkMonitor; // Access for plugins
 
         return { context: this.context, page: this.page };
     }

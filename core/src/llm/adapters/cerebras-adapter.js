@@ -3,7 +3,7 @@
  * Implementation of BaseLLMAdapter for Cerebras AI
  */
 const Cerebras = require('@cerebras/cerebras_cloud_sdk').default;
-const { BaseLLMAdapter } = require('./base-adapter');
+const { BaseLLMAdapter } = require('../base-adapter');
 
 class CerebrasAdapter extends BaseLLMAdapter {
     constructor(config) {

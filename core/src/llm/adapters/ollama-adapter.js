@@ -3,7 +3,7 @@
  * For running local models via Ollama API
  * No npm package needed - uses fetch
  */
-const { BaseLLMAdapter } = require('./base-adapter');
+const { BaseLLMAdapter } = require('../base-adapter');
 
 class OllamaAdapter extends BaseLLMAdapter {
     constructor(config) {

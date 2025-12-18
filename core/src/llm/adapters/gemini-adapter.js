@@ -3,7 +3,7 @@
  * Implementation of BaseLLMAdapter for Google Gemini 2.5 Flash
  */
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { BaseLLMAdapter } = require('./base-adapter');
+const { BaseLLMAdapter } = require('../base-adapter');
 
 class GeminiAdapter extends BaseLLMAdapter {
     constructor(config) {
