@@ -16,7 +16,8 @@
     "start:http": "node ../servers/http-server.js",
     "start:mcp": "node ../servers/mcp-server.js",
     "watch:mcp": "npx nodemon ../servers/mcp-server.js",
-    "cli": "node src/scripts/direct-cli.js"
+    "cli": "node src/scripts/direct-cli.js",
+    "skill": "node src/scripts/skill-runner.js"
   },
   "keywords": [
     "html",

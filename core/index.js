@@ -53,6 +53,9 @@ const { AgentMemory } = require('./src/agent/agent-memory');
 // Workflow
 const { WkyExecutor } = require('./src/wky-executor');
 
+// Skills
+const { BaseSkill, SkillOrchestrator, skills } = require('./src/skills');
+
 // High-level API
 const { BrowserAutomationAPI } = require('./src/api');
 
@@ -134,5 +137,10 @@ module.exports = {
     AgentMemory,
 
     // Workflow
-    WkyExecutor
+    WkyExecutor,
+
+    // Skills
+    BaseSkill,
+    SkillOrchestrator,
+    skills
 };
