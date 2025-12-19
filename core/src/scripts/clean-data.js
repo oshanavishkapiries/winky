@@ -8,7 +8,7 @@ const path = require('path');
 
 const dataDir = process.env.DATA_DIR
     ? path.resolve(process.env.DATA_DIR)
-    : path.join(__dirname, '..', '..', 'data');
+    : path.join(__dirname, '..', '..', '..', 'data');
 
 // Folders to clean (remove all contents but keep the folder)
 const foldersToClean = [
