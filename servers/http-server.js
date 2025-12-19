@@ -25,9 +25,53 @@ require('dotenv').config({ path: path.join(__dirname, '..', 'core', '.env') });
 
 // Import from core
 const { BrowserAutomationAPI, runAgent, executeWorkflow } = require('../core');
+const { SSEServerTransport } = require('@modelcontextprotocol/sdk/server/sse.js');
+const { createMcpServer } = require('./mcp-setup');
 
 const app = express();
 const PORT = process.env.HTTP_PORT || 3000;
+
+// Initialize MCP Server for SSE
+let mcpServer = null;
+let mcpTransport = null;
+
+try {
+    mcpServer = createMcpServer();
+    // note: we don't 'connect' the transport yet, we do it per request or handle it differently for SSE
+    console.log('[MCP] Initialized shared MCP server instance');
+} catch (e) {
+    console.error('[MCP] Failed to initialize:', e);
+}
+
+// ... existing code ...
+
+// ============================================================================
+// Remote MCP (SSE) Endpoints
+// ============================================================================
+
+/**
+ * GET /mcp/sse
+ * Establish Server-Sent Events connection for MCP
+ */
+app.get('/mcp/sse', async (req, res) => {
+    console.log('[MCP] New SSE connection');
+
+    mcpTransport = new SSEServerTransport('/mcp/messages', res);
+    await mcpServer.connect(mcpTransport);
+});
+
+/**
+ * POST /mcp/messages
+ * Receive JSON-RPC messages from MCP client
+ */
+app.post('/mcp/messages', async (req, res) => {
+    // console.log('[MCP] Message received');
+    if (!mcpTransport) {
+        return res.status(400).json({ error: 'No active SSE connection' });
+    }
+
+    await mcpTransport.handlePostMessage(req, res);
+});
 
 // Active sessions storage
 const sessions = new Map();
