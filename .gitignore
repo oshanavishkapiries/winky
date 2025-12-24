@@ -1,4 +1,8 @@
-node_modules
-temp-code
-data
-.idea
+__pycache__
+*.pyc
+venv
+screenshots
+logs
+output
+browser_data
+
