@@ -14,7 +14,7 @@ export default class NavigateBackTool extends BaseTool {
   readonly readOnly = false;
 
   protected async executeImpl(
-    params: unknown,
+    _params: unknown,
     context: ToolContext,
   ): Promise<ToolResult> {
     const page = await context.pageManager.getCurrentPage();

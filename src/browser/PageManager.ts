@@ -1,15 +1,23 @@
-import type { Page, BrowserContext } from "playwright-core";
+import type {
+  Page,
+  BrowserContext,
+  ConsoleMessage,
+  Request,
+} from "playwright-core";
 import { getLogger } from "../logger/Logger.js";
 import { BrowserError } from "../utils/errors.js";
 
 /**
  * PageManager - Manages active pages and tabs
  * Tracks the current page and provides tab management
+ * Also tracks console messages and network requests
  */
 export class PageManager {
   private context: BrowserContext;
   private currentPage: Page | null = null;
   private logger = getLogger();
+  private consoleMessages: ConsoleMessage[] = [];
+  private networkRequests: Request[] = [];
 
   constructor(context: BrowserContext) {
     this.context = context;
@@ -29,14 +37,31 @@ export class PageManager {
 
     if (pages.length > 0) {
       this.currentPage = pages[0];
+      this.setupPageListeners(this.currentPage);
       this.logger.browser("info", "Using existing page");
       return this.currentPage;
     }
 
     // Create a new page
     this.currentPage = await this.context.newPage();
+    this.setupPageListeners(this.currentPage);
     this.logger.browser("info", "Created new page");
     return this.currentPage;
+  }
+
+  /**
+   * Set up event listeners for console and network tracking
+   */
+  private setupPageListeners(page: Page): void {
+    // Track console messages
+    page.on("console", (msg) => {
+      this.consoleMessages.push(msg);
+    });
+
+    // Track network requests
+    page.on("request", (request) => {
+      this.networkRequests.push(request);
+    });
   }
 
   /**
@@ -45,6 +70,7 @@ export class PageManager {
   async createTab(): Promise<Page> {
     const newPage = await this.context.newPage();
     this.currentPage = newPage;
+    this.setupPageListeners(newPage);
     this.logger.browser("info", "Created new tab");
     return newPage;
   }
@@ -107,5 +133,54 @@ export class PageManager {
    */
   getTabCount(): number {
     return this.context.pages().length;
+  }
+
+  /**
+   * Get console messages, optionally filtered by level
+   */
+  getConsoleMessages(
+    level?: string,
+  ): Array<{ type: string; text: string; location: string }> {
+    let messages = this.consoleMessages;
+
+    if (level) {
+      messages = messages.filter((msg) => msg.type() === level);
+    }
+
+    return messages.map((msg) => ({
+      type: msg.type(),
+      text: msg.text(),
+      location: msg.location().url,
+    }));
+  }
+
+  /**
+   * Get network requests, optionally filtering static resources
+   */
+  getNetworkRequests(
+    filterStatic: boolean = true,
+  ): Array<{ url: string; method: string; resourceType: string }> {
+    let requests = this.networkRequests;
+
+    if (filterStatic) {
+      const staticTypes = ["image", "stylesheet", "font", "media"];
+      requests = requests.filter(
+        (req) => !staticTypes.includes(req.resourceType()),
+      );
+    }
+
+    return requests.map((req) => ({
+      url: req.url(),
+      method: req.method(),
+      resourceType: req.resourceType(),
+    }));
+  }
+
+  /**
+   * Clear console messages and network requests
+   */
+  clearTracking(): void {
+    this.consoleMessages = [];
+    this.networkRequests = [];
   }
 }
