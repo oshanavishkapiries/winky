@@ -1,4 +1,4 @@
-import { chromium, type Browser, type BrowserContext } from "playwright-core";
+import { chromium, type Browser, type BrowserContext } from "playwright";
 import { getLogger } from "../logger/Logger.js";
 import { BrowserError } from "../utils/errors.js";
 import type { WinkyConfig } from "../config/schema.js";
@@ -29,12 +29,14 @@ export class BrowserManager {
 
     try {
       this.logger.browser("info", "Launching browser", {
-        executablePath: this.config.executablePath,
+        executablePath: this.config.executablePath || "bundled Chromium",
         headless: this.config.headless,
       });
 
       this.browser = await chromium.launch({
-        executablePath: this.config.executablePath,
+        ...(this.config.executablePath && {
+          executablePath: this.config.executablePath,
+        }),
         headless: this.config.headless,
       });
 
@@ -65,11 +67,13 @@ export class BrowserManager {
     try {
       this.logger.browser("info", "Launching browser with persistent context", {
         userDataDir,
-        executablePath: this.config.executablePath,
+        executablePath: this.config.executablePath || "bundled Chromium",
       });
 
       this.context = await chromium.launchPersistentContext(userDataDir, {
-        executablePath: this.config.executablePath,
+        ...(this.config.executablePath && {
+          executablePath: this.config.executablePath,
+        }),
         headless: this.config.headless,
         viewport: this.config.viewport,
       });

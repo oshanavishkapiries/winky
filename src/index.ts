@@ -6,6 +6,7 @@ import { ProfileManager } from "./browser/ProfileManager.js";
 import { ToolRegistry } from "./tools/ToolRegistry.js";
 import { LLMService } from "./llm/LLMService.js";
 import { Orchestrator } from "./agent/Orchestrator.js";
+import { MemoryManager } from "./memory/MemoryManager.js";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -17,6 +18,7 @@ async function main() {
   const logger = getLogger();
   let browserManager: BrowserManager | null = null;
   let orchestrator: Orchestrator | null = null;
+  let memoryManager: MemoryManager | null = null;
 
   try {
     // Load and validate configuration
@@ -53,50 +55,77 @@ async function main() {
     const llmService = new LLMService(config.llm);
     logger.workflow("info", "LLM service initialized");
 
+    // Initialize memory manager if enabled
+    if (config.memory.enabled) {
+      memoryManager = new MemoryManager(config.memory.dbPath);
+      logger.workflow("info", "Memory manager initialized", {
+        dbPath: config.memory.dbPath,
+      });
+    }
+
     // Initialize orchestrator
-    orchestrator = new Orchestrator(llmService.getProvider(), toolRegistry, {
-      browserManager,
-      pageManager,
-    });
+    orchestrator = new Orchestrator(
+      llmService.getProvider(),
+      toolRegistry,
+      {
+        browserManager,
+        pageManager,
+      },
+      memoryManager || undefined,
+    );
     logger.workflow("info", "Orchestrator initialized");
 
     console.log("\n🌟 Winky Browser Agent Ready!\n");
     console.log(`📊 Loaded ${toolRegistry.getToolCount()} tools`);
     console.log(`🤖 LLM: ${config.llm.provider} (${config.llm.model})`);
     console.log(
-      `🌐 Browser: ${config.browser.headless ? "Headless" : "Headed"}\n`,
+      `🌐 Browser: ${config.browser.headless ? "Headless" : "Headed"}`,
     );
+    console.log(`🔌 Mode: ${config.acp.enabled ? "ACP Server" : "CLI"}\n`);
 
-    // Start interactive CLI
-    const rl = readline.createInterface({ input, output });
+    // Check if ACP mode is enabled
+    if (config.acp.enabled) {
+      // Start ACP server mode
+      const { ACPServer } = await import("./acp/ACPServer.js");
+      const acpServer = new ACPServer(orchestrator);
 
-    while (true) {
-      const userInput = await rl.question("You: ");
+      logger.workflow("info", "Starting ACP server on stdio");
+      console.log("🚀 ACP server listening on stdio...\n");
 
-      if (!userInput.trim()) continue;
+      // This will block until connection closes
+      await acpServer.start();
+    } else {
+      // Start interactive CLI mode
+      const rl = readline.createInterface({ input, output });
 
-      if (
-        userInput.toLowerCase() === "exit" ||
-        userInput.toLowerCase() === "quit"
-      ) {
-        console.log("\n👋 Goodbye!\n");
-        rl.close();
-        break;
-      }
+      while (true) {
+        const userInput = await rl.question("You: ");
 
-      if (userInput.toLowerCase() === "reset") {
-        orchestrator.reset();
-        console.log("\n🔄 Conversation reset\n");
-        continue;
-      }
+        if (!userInput.trim()) continue;
 
-      try {
-        await orchestrator.executeTask(userInput);
-      } catch (error) {
-        console.error(
-          "\n❌ Error:",
-          error instanceof Error ? error.message : String(error),
-        );
+        if (
+          userInput.toLowerCase() === "exit" ||
+          userInput.toLowerCase() === "quit"
+        ) {
+          console.log("\n👋 Goodbye!\n");
+          rl.close();
+          break;
+        }
+
+        if (userInput.toLowerCase() === "reset") {
+          orchestrator.reset();
+          console.log("\n🔄 Conversation reset\n");
+          continue;
+        }
+
+        try {
+          await orchestrator.executeTask(userInput);
+        } catch (error) {
+          console.error(
+            "\n❌ Error:",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
       }
     }
   } catch (error) {
@@ -104,6 +133,9 @@ async function main() {
     process.exit(1);
   } finally {
     // Cleanup
+    if (memoryManager) {
+      memoryManager.close();
+    }
     if (browserManager) {
       await browserManager.close();
     }

@@ -21,8 +21,10 @@
     "license": "MIT",
     "dependencies": {
         "@agentclientprotocol/sdk": "^0.14.1",
+        "@types/better-sqlite3": "^7.6.13",
+        "better-sqlite3": "^12.6.2",
         "openai": "^4.77.0",
-        "playwright-core": "^1.51.0",
+        "playwright": "^1.58.2",
         "winston": "^3.17.0",
         "zod": "^3.24.1",
         "zod-to-json-schema": "^3.25.1"

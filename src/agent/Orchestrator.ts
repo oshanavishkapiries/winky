@@ -4,6 +4,7 @@ import type { ToolContext } from "../tools/ITool.js";
 import type { AgentStep } from "./types.js";
 import { getLogger } from "../logger/Logger.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import type { MemoryManager } from "../memory/MemoryManager.js";
 
 /**
  * Orchestrator - Core agent loop
@@ -16,15 +17,19 @@ export class Orchestrator {
   private logger = getLogger();
   private conversationHistory: LLMMessage[] = [];
   private steps: AgentStep[] = [];
+  private memory: MemoryManager | null = null;
+  private currentSessionId: string | null = null;
 
   constructor(
     llmProvider: ILLMProvider,
     toolRegistry: ToolRegistry,
     toolContext: ToolContext,
+    memory?: MemoryManager,
   ) {
     this.llmProvider = llmProvider;
     this.toolRegistry = toolRegistry;
     this.toolContext = toolContext;
+    this.memory = memory || null;
 
     // Initialize with system prompt
     this.conversationHistory.push({
@@ -58,11 +63,26 @@ Be precise and methodical. Explain your reasoning before taking actions.`;
       maxSteps,
     });
 
+    // Start new session if memory enabled
+    if (this.memory) {
+      this.currentSessionId = this.memory.startSession(userRequest);
+      this.memory.saveMessage(
+        this.currentSessionId,
+        "system",
+        this.getSystemPrompt(),
+      );
+    }
+
     // Add user message to history
     this.conversationHistory.push({
       role: "user",
       content: userRequest,
     });
+
+    // Save user message to memory
+    if (this.memory && this.currentSessionId) {
+      this.memory.saveMessage(this.currentSessionId, "user", userRequest);
+    }
 
     for (let step = 0; step < maxSteps; step++) {
       this.logger.workflow("info", `Step ${step + 1}/${maxSteps}`);
@@ -91,6 +111,16 @@ Be precise and methodical. Explain your reasoning before taking actions.`;
           role: "assistant",
           content: response.content,
         });
+
+        // Save completion to memory
+        if (this.memory && this.currentSessionId) {
+          this.memory.saveMessage(
+            this.currentSessionId,
+            "assistant",
+            response.content,
+          );
+          this.memory.completeSession(this.currentSessionId, true);
+        }
 
         console.log("\n✅ Task completed!");
         console.log(`Agent: ${response.content}\n`);
@@ -126,6 +156,17 @@ Be precise and methodical. Explain your reasoning before taking actions.`;
           };
 
           this.steps.push(agentStep);
+
+          // Save tool execution to memory
+          if (this.memory && this.currentSessionId) {
+            this.memory.saveToolExecution(
+              this.currentSessionId,
+              toolCall.name,
+              toolCall.arguments,
+              result.data,
+              result.success,
+            );
+          }
 
           // Add observation to conversation
           const observationMessage = result.success

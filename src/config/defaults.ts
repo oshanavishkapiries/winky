@@ -6,7 +6,6 @@ import type { WinkyConfig } from "./schema.js";
  */
 export const defaultConfig: Partial<WinkyConfig> = {
   browser: {
-    executablePath: "", // Must be provided by user
     headless: false,
     defaultProfile: "default",
     viewport: {
@@ -24,5 +23,10 @@ export const defaultConfig: Partial<WinkyConfig> = {
     enabled: true,
     agentName: "winky",
     agentTitle: "Winky Browser Agent",
+  },
+
+  memory: {
+    enabled: true,
+    dbPath: "data/memory/winky.db",
   },
 };

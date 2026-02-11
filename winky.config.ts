@@ -8,10 +8,11 @@ import type { WinkyConfig } from "./src/config/schema";
  */
 const config: WinkyConfig = {
   llm: {
-    provider: "openrouter", // or 'openai'
-    apiKey: process.env.OPENAI_API_KEY || "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",
-    model: "arcee-ai/trinity-large-preview:free", // or any OpenAI/OpenRouter model
-    baseURL: "https://openrouter.ai/api/v1", // Uncomment for OpenRouter
+    provider: "openai", // or 'openai , openrouter'
+    apiKey: process.env.OPENAI_API_KEY || "",
+    model: "gpt-4o", // or any OpenAI model
+    // model: "arcee-ai/trinity-large-preview:free", // or any OpenAI/OpenRouter model
+    // baseURL: "https://openrouter.ai/api/v1", // Uncomment for OpenRouter
   },
 
   browser: {
@@ -37,9 +38,14 @@ const config: WinkyConfig = {
   },
 
   acp: {
-    enabled: true, // Enable ACP server for editor integration
+    enabled: false, // Enable ACP server for editor integration
     agentName: "winky",
     agentTitle: "Winky Browser Agent",
+  },
+
+  memory: {
+    enabled: true, // Enable persistent memory
+    dbPath: "data/memory/winky.db",
   },
 };
 

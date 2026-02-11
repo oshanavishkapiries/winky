@@ -13,7 +13,12 @@ export const WinkyConfigSchema = z.object({
   }),
 
   browser: z.object({
-    executablePath: z.string().min(1, "Browser executable path is required"),
+    executablePath: z
+      .string()
+      .optional()
+      .describe(
+        "Path to browser executable. Leave empty to use Playwright's bundled Chromium.",
+      ),
     headless: z.boolean().default(false),
     defaultProfile: z.string().default("default"),
     viewport: z
@@ -33,6 +38,11 @@ export const WinkyConfigSchema = z.object({
     enabled: z.boolean().default(true),
     agentName: z.string().default("winky"),
     agentTitle: z.string().default("Winky Browser Agent"),
+  }),
+
+  memory: z.object({
+    enabled: z.boolean().default(true),
+    dbPath: z.string().default("data/memory/winky.db"),
   }),
 });
 
