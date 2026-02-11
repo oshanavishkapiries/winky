@@ -64,39 +64,53 @@ async function main() {
     console.log(`📊 Loaded ${toolRegistry.getToolCount()} tools`);
     console.log(`🤖 LLM: ${config.llm.provider} (${config.llm.model})`);
     console.log(
-      `🌐 Browser: ${config.browser.headless ? "Headless" : "Headed"}\n`,
+      `🌐 Browser: ${config.browser.headless ? "Headless" : "Headed"}`,
     );
+    console.log(`🔌 Mode: ${config.acp.enabled ? "ACP Server" : "CLI"}\n`);
 
-    // Start interactive CLI
-    const rl = readline.createInterface({ input, output });
+    // Check if ACP mode is enabled
+    if (config.acp.enabled) {
+      // Start ACP server mode
+      const { ACPServer } = await import("./acp/ACPServer.js");
+      const acpServer = new ACPServer(orchestrator);
 
-    while (true) {
-      const userInput = await rl.question("You: ");
+      logger.workflow("info", "Starting ACP server on stdio");
+      console.log("🚀 ACP server listening on stdio...\n");
 
-      if (!userInput.trim()) continue;
+      // This will block until connection closes
+      await acpServer.start();
+    } else {
+      // Start interactive CLI mode
+      const rl = readline.createInterface({ input, output });
 
-      if (
-        userInput.toLowerCase() === "exit" ||
-        userInput.toLowerCase() === "quit"
-      ) {
-        console.log("\n👋 Goodbye!\n");
-        rl.close();
-        break;
-      }
+      while (true) {
+        const userInput = await rl.question("You: ");
 
-      if (userInput.toLowerCase() === "reset") {
-        orchestrator.reset();
-        console.log("\n🔄 Conversation reset\n");
-        continue;
-      }
+        if (!userInput.trim()) continue;
 
-      try {
-        await orchestrator.executeTask(userInput);
-      } catch (error) {
-        console.error(
-          "\n❌ Error:",
-          error instanceof Error ? error.message : String(error),
-        );
+        if (
+          userInput.toLowerCase() === "exit" ||
+          userInput.toLowerCase() === "quit"
+        ) {
+          console.log("\n👋 Goodbye!\n");
+          rl.close();
+          break;
+        }
+
+        if (userInput.toLowerCase() === "reset") {
+          orchestrator.reset();
+          console.log("\n🔄 Conversation reset\n");
+          continue;
+        }
+
+        try {
+          await orchestrator.executeTask(userInput);
+        } catch (error) {
+          console.error(
+            "\n❌ Error:",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
       }
     }
   } catch (error) {
