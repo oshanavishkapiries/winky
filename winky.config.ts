@@ -4,48 +4,43 @@ import type { WinkyConfig } from "./src/config/schema";
  * Winky Configuration File
  *
  * This file contains all configuration for the Winky browser automation agent.
- * Copy this file and customize it for your needs.
+ * Sensitive values (API keys) should be stored in .env file.
  */
 const config: WinkyConfig = {
   llm: {
-    provider: "openai", // or 'openai , openrouter'
-    apiKey: process.env.OPENAI_API_KEY || "",
-    model: "gpt-4o", // or any OpenAI model
-    // model: "arcee-ai/trinity-large-preview:free", // or any OpenAI/OpenRouter model
-    // baseURL: "https://openrouter.ai/api/v1", // Uncomment for OpenRouter
+    provider:
+      (process.env.WINKY_LLM_PROVIDER as "openai" | "openrouter") || "openai",
+    apiKey: process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY || "",
+    model: process.env.WINKY_LLM_MODEL || "gpt-4o",
+    baseURL: process.env.WINKY_LLM_BASE_URL,
   },
 
   browser: {
-    // Path to your browser executable
-    // Windows: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-    // macOS: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    // Linux: '/usr/bin/google-chrome'
-    executablePath:
-      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-
-    headless: false, // Set to true for headless mode
-    defaultProfile: "default", // Browser profile name
-
+    executablePath: process.env.WINKY_BROWSER_EXECUTABLE_PATH,
+    headless: process.env.WINKY_BROWSER_HEADLESS === "true",
+    defaultProfile: process.env.WINKY_BROWSER_PROFILE || "default",
     viewport: {
-      width: 1280,
-      height: 720,
+      width: parseInt(process.env.WINKY_BROWSER_VIEWPORT_WIDTH || "1280"),
+      height: parseInt(process.env.WINKY_BROWSER_VIEWPORT_HEIGHT || "720"),
     },
   },
 
   logging: {
-    level: "info", // 'error' | 'warn' | 'info' | 'debug'
-    retentionDays: 7, // How long to keep logs
+    level:
+      (process.env.WINKY_LOG_LEVEL as "error" | "warn" | "info" | "debug") ||
+      "info",
+    retentionDays: parseInt(process.env.WINKY_LOG_RETENTION_DAYS || "7"),
   },
 
   acp: {
-    enabled: false, // Enable ACP server for editor integration
-    agentName: "winky",
-    agentTitle: "Winky Browser Agent",
+    enabled: process.env.WINKY_ACP_ENABLED === "true",
+    agentName: process.env.WINKY_ACP_AGENT_NAME || "winky",
+    agentTitle: process.env.WINKY_ACP_AGENT_TITLE || "Winky Browser Agent",
   },
 
   memory: {
-    enabled: true, // Enable persistent memory
-    dbPath: "data/memory/winky.db",
+    enabled: process.env.WINKY_MEMORY_ENABLED !== "false", // Default to true
+    dbPath: process.env.WINKY_MEMORY_DB_PATH || "data/memory/winky.db",
   },
 };
 

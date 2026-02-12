@@ -1,7 +1,11 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { config as dotenvConfig } from "dotenv";
 import { WinkyConfigSchema, type WinkyConfig } from "./schema.js";
 import { defaultConfig } from "./defaults.js";
+
+// Load environment variables from .env file
+dotenvConfig();
 
 /**
  * Loads and validates the Winky configuration
