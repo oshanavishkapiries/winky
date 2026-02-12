@@ -39,32 +39,57 @@ export default class AxTreeTool extends BaseTool {
     // Get the accessibility snapshot
     // Note: accessibility API exists at runtime but not in playwright-core types
     const pageWithAccessibility = page as any;
-    const snapshot = await pageWithAccessibility.accessibility.snapshot({
-      interestingOnly,
-      ...(root && { root: await page.locator(root).elementHandle() }),
-    });
 
-    if (!snapshot) {
+    try {
+      // Check if accessibility API is available
+      if (
+        !pageWithAccessibility.accessibility ||
+        typeof pageWithAccessibility.accessibility.snapshot !== "function"
+      ) {
+        this.logger.tool(
+          "warn",
+          "Accessibility API not available, falling back to snapshot",
+        );
+        return {
+          success: false,
+          error:
+            "Accessibility API not available on this browser. Use browser_snapshot instead.",
+        };
+      }
+
+      const snapshot = await pageWithAccessibility.accessibility.snapshot({
+        interestingOnly,
+        ...(root && { root: await page.locator(root).elementHandle() }),
+      });
+
+      if (!snapshot) {
+        return {
+          success: false,
+          error: "Failed to capture accessibility tree (page may be empty)",
+        };
+      }
+
+      // Format the tree into readable text
+      const formattedTree = this.formatAxTree(snapshot);
+
+      return {
+        success: true,
+        data: {
+          url,
+          title,
+          tree: formattedTree,
+          raw: snapshot,
+          instructions:
+            "The tree shows the accessibility structure with roles, names, and states. Use this to understand page hierarchy and element relationships.",
+        },
+      };
+    } catch (error) {
+      this.logger.tool("error", "Accessibility snapshot failed", { error });
       return {
         success: false,
-        error: "Failed to capture accessibility tree (page may be empty)",
+        error: `Accessibility API error: ${error instanceof Error ? error.message : String(error)}. Use browser_snapshot instead.`,
       };
     }
-
-    // Format the tree into readable text
-    const formattedTree = this.formatAxTree(snapshot);
-
-    return {
-      success: true,
-      data: {
-        url,
-        title,
-        tree: formattedTree,
-        raw: snapshot,
-        instructions:
-          "The tree shows the accessibility structure with roles, names, and states. Use this to understand page hierarchy and element relationships.",
-      },
-    };
   }
 
   /**
