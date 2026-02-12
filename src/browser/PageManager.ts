@@ -1,4 +1,5 @@
 import type { Page, BrowserContext, ConsoleMessage, Request } from "playwright";
+import type { SQLiteStore } from "../memory/SQLiteStore.js";
 import { getLogger } from "../logger/Logger.js";
 import { BrowserError } from "../utils/errors.js";
 
@@ -13,9 +14,19 @@ export class PageManager {
   private logger = getLogger();
   private consoleMessages: ConsoleMessage[] = [];
   private networkRequests: Request[] = [];
+  private store: SQLiteStore | null = null;
+  private sessionId: string | null = null;
 
   constructor(context: BrowserContext) {
     this.context = context;
+  }
+
+  /**
+   * Set SQLite store and session ID for logging
+   */
+  setLogging(store: SQLiteStore, sessionId: string): void {
+    this.store = store;
+    this.sessionId = sessionId;
   }
 
   /**
@@ -51,11 +62,33 @@ export class PageManager {
     // Track console messages
     page.on("console", (msg) => {
       this.consoleMessages.push(msg);
+
+      // Log to SQLite if available
+      if (this.store && this.sessionId) {
+        this.store.saveConsoleLog({
+          sessionId: this.sessionId,
+          timestamp: Date.now(),
+          level: msg.type() as "log" | "info" | "warn" | "error",
+          message: msg.text(),
+          url: page.url(),
+        });
+      }
     });
 
     // Track network requests
     page.on("request", (request) => {
       this.networkRequests.push(request);
+
+      // Log to SQLite if available
+      if (this.store && this.sessionId) {
+        this.store.saveNetworkLog({
+          sessionId: this.sessionId,
+          timestamp: Date.now(),
+          method: request.method(),
+          url: request.url(),
+          resourceType: request.resourceType(),
+        });
+      }
     });
   }
 

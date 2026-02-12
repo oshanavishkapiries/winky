@@ -1,4 +1,5 @@
 import { SQLiteStore } from "./SQLiteStore.js";
+import { SessionManager } from "../session/SessionManager.js";
 import type {
   Session,
   Message,
@@ -12,12 +13,14 @@ import { getLogger } from "../logger/Logger.js";
  */
 export class MemoryManager {
   private store: SQLiteStore;
+  private sessionManager: SessionManager;
   private logger = getLogger();
   private currentSessionId: string | null = null;
 
-  constructor(dbPath: string) {
+  constructor(dbPath: string, dataDir: string = "data") {
     this.store = new SQLiteStore(dbPath);
-    this.logger.workflow("info", "Memory manager initialized");
+    this.sessionManager = new SessionManager(dataDir);
+    this.logger.workflow("info", "Memory manager initialized", { dbPath });
   }
 
   /**
@@ -38,6 +41,9 @@ export class MemoryManager {
 
     this.store.saveSession(session);
     this.currentSessionId = sessionId;
+
+    // Create session folder structure
+    this.sessionManager.createSessionFolder(sessionId);
 
     this.logger.workflow("info", "Started new session", {
       sessionId,
@@ -152,6 +158,13 @@ export class MemoryManager {
    */
   getRecentSessions(limit: number = 10): Session[] {
     return this.store.getRecentSessions(limit);
+  }
+
+  /**
+   * Get SQLite store (for logger configuration)
+   */
+  getStore(): SQLiteStore {
+    return this.store;
   }
 
   /**

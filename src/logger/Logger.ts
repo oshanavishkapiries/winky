@@ -1,123 +1,108 @@
 import winston from "winston";
-import { resolve } from "node:path";
-import { mkdirSync } from "node:fs";
+import type { SQLiteStore } from "../memory/SQLiteStore.js";
 
-export type LogCategory = "workflow" | "llm" | "browser";
+export type LogCategory = "workflow" | "llm" | "browser" | "tool";
+export type LogLevel = "info" | "warn" | "error";
 
 /**
- * Winston-based logger with separate file transports for each category
+ * Logger with SQLite storage and console output
  * Follows Single Responsibility Principle
  */
 export class Logger {
-  private loggers: Map<LogCategory, winston.Logger> = new Map();
-  private logDir: string;
+  private consoleLogger: winston.Logger;
+  private store: SQLiteStore | null = null;
+  private currentSessionId: string | null = null;
 
-  constructor(logLevel: string = "info", logDir: string = "data/logs") {
-    this.logDir = resolve(process.cwd(), logDir);
-    this.ensureLogDirectories();
-    this.initializeLoggers(logLevel);
+  constructor(logLevel: string = "info") {
+    // Console-only logger for development
+    this.consoleLogger = winston.createLogger({
+      level: logLevel,
+      format: winston.format.combine(
+        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, category }) => {
+          const cat = category ? `[${category}]` : "";
+          return `${timestamp} ${level} ${cat}: ${message}`;
+        }),
+      ),
+      transports: [new winston.transports.Console()],
+    });
   }
 
   /**
-   * Ensure all log directories exist
+   * Set SQLite store for database logging
    */
-  private ensureLogDirectories(): void {
-    const categories: LogCategory[] = ["workflow", "llm", "browser"];
-
-    for (const category of categories) {
-      const dir = resolve(this.logDir, category);
-      mkdirSync(dir, { recursive: true });
-    }
+  setStore(store: SQLiteStore): void {
+    this.store = store;
   }
 
   /**
-   * Initialize Winston loggers for each category
+   * Set current session ID for logging
    */
-  private initializeLoggers(logLevel: string): void {
-    const categories: LogCategory[] = ["workflow", "llm", "browser"];
-
-    for (const category of categories) {
-      const logger = winston.createLogger({
-        level: logLevel,
-        format: winston.format.combine(
-          winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-          winston.format.errors({ stack: true }),
-          winston.format.json(),
-        ),
-        transports: [
-          // File transport for this category
-          new winston.transports.File({
-            filename: resolve(this.logDir, category, `${category}.log`),
-            maxsize: 10 * 1024 * 1024, // 10MB
-            maxFiles: 5,
-          }),
-          // Console transport for development
-          new winston.transports.Console({
-            format: winston.format.combine(
-              winston.format.colorize(),
-              winston.format.simple(),
-            ),
-          }),
-        ],
-      });
-
-      this.loggers.set(category, logger);
-    }
+  setSessionId(sessionId: string): void {
+    this.currentSessionId = sessionId;
   }
 
   /**
-   * Log to a specific category
+   * Log to console and SQLite
    */
   log(
     category: LogCategory,
-    level: string,
+    level: LogLevel,
     message: string,
     meta?: Record<string, unknown>,
   ): void {
-    const logger = this.loggers.get(category);
-    if (!logger) {
-      throw new Error(`Unknown log category: ${category}`);
-    }
+    // Always log to console
+    this.consoleLogger.log(level, message, { category, ...meta });
 
-    logger.log(level, message, meta);
+    // Log to SQLite if available
+    if (this.store && this.currentSessionId) {
+      this.store.saveWorkflowLog({
+        sessionId: this.currentSessionId,
+        timestamp: Date.now(),
+        level,
+        category,
+        message,
+        metadata: meta,
+      });
+    }
   }
 
   /**
    * Convenience methods for each category
    */
   workflow(
-    level: string,
+    level: LogLevel,
     message: string,
     meta?: Record<string, unknown>,
   ): void {
     this.log("workflow", level, message, meta);
   }
 
-  llm(level: string, message: string, meta?: Record<string, unknown>): void {
+  llm(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
     this.log("llm", level, message, meta);
   }
 
   browser(
-    level: string,
+    level: LogLevel,
     message: string,
     meta?: Record<string, unknown>,
   ): void {
     this.log("browser", level, message, meta);
   }
 
+  tool(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
+    this.log("tool", level, message, meta);
+  }
+
   /**
-   * Shutdown all loggers gracefully
+   * Shutdown logger gracefully
    */
   async close(): Promise<void> {
-    const closePromises = Array.from(this.loggers.values()).map(
-      (logger) =>
-        new Promise<void>((resolve) => {
-          logger.close();
-          logger.on("finish", resolve);
-        }),
-    );
-
-    await Promise.all(closePromises);
+    await new Promise<void>((resolve) => {
+      this.consoleLogger.close();
+      this.consoleLogger.on("finish", resolve);
+    });
   }
 }
 

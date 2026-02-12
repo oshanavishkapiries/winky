@@ -58,8 +58,22 @@ async function main() {
     // Initialize memory manager if enabled
     if (config.memory.enabled) {
       memoryManager = new MemoryManager(config.memory.dbPath);
+
+      // Start a new session
+      const sessionId = memoryManager.startSession(
+        "Winky Browser Agent Session",
+      );
+
+      // Configure logger to use SQLite
+      logger.setStore(memoryManager.getStore());
+      logger.setSessionId(sessionId);
+
+      // Configure page manager to use SQLite
+      pageManager.setLogging(memoryManager.getStore(), sessionId);
+
       logger.workflow("info", "Memory manager initialized", {
         dbPath: config.memory.dbPath,
+        sessionId,
       });
     }
 

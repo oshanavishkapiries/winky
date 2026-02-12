@@ -1,7 +1,16 @@
 import Database from "better-sqlite3";
 import { resolve } from "node:path";
 import { mkdirSync, existsSync } from "node:fs";
-import type { Session, Message, ToolExecution } from "./types.js";
+import type {
+  Session,
+  Message,
+  ToolExecution,
+  ConsoleLog,
+  NetworkLog,
+  LLMLog,
+  WorkflowLog,
+  SessionFile,
+} from "./types.js";
 import { getLogger } from "../logger/Logger.js";
 
 /**
@@ -69,11 +78,85 @@ export class SQLiteStore {
       )
     `);
 
+    // Browser console logs table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS console_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        level TEXT NOT NULL,
+        message TEXT NOT NULL,
+        url TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      )
+    `);
+
+    // Network request logs table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS network_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        method TEXT NOT NULL,
+        url TEXT NOT NULL,
+        status INTEGER,
+        resource_type TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      )
+    `);
+
+    // LLM API call logs table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS llm_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        model TEXT NOT NULL,
+        prompt_tokens INTEGER NOT NULL,
+        completion_tokens INTEGER NOT NULL,
+        total_tokens INTEGER NOT NULL,
+        duration INTEGER,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      )
+    `);
+
+    // Workflow/system logs table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS workflow_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        level TEXT NOT NULL,
+        category TEXT NOT NULL,
+        message TEXT NOT NULL,
+        metadata TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      )
+    `);
+
+    // Session files table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS session_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        metadata TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(id)
+      )
+    `);
+
     // Create indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
       CREATE INDEX IF NOT EXISTS idx_tools_session ON tool_executions(session_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_console_session ON console_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_network_session ON network_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_llm_session ON llm_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_workflow_session ON workflow_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_files_session ON session_files(session_id);
     `);
 
     this.logger.workflow("info", "Database tables initialized");
@@ -217,6 +300,94 @@ export class SQLiteStore {
       success: row.success === 1,
       timestamp: row.timestamp,
     }));
+  }
+
+  /**
+   * Save a console log
+   */
+  saveConsoleLog(log: ConsoleLog): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO console_logs (session_id, timestamp, level, message, url)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(log.sessionId, log.timestamp, log.level, log.message, log.url);
+  }
+
+  /**
+   * Save a network request log
+   */
+  saveNetworkLog(log: NetworkLog): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO network_logs (session_id, timestamp, method, url, status, resource_type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      log.sessionId,
+      log.timestamp,
+      log.method,
+      log.url,
+      log.status,
+      log.resourceType,
+    );
+  }
+
+  /**
+   * Save an LLM API call log
+   */
+  saveLLMLog(log: LLMLog): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO llm_logs (session_id, timestamp, model, prompt_tokens, completion_tokens, total_tokens, duration)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      log.sessionId,
+      log.timestamp,
+      log.model,
+      log.promptTokens,
+      log.completionTokens,
+      log.totalTokens,
+      log.duration,
+    );
+  }
+
+  /**
+   * Save a workflow/system log
+   */
+  saveWorkflowLog(log: WorkflowLog): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO workflow_logs (session_id, timestamp, level, category, message, metadata)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      log.sessionId,
+      log.timestamp,
+      log.level,
+      log.category,
+      log.message,
+      log.metadata ? JSON.stringify(log.metadata) : null,
+    );
+  }
+
+  /**
+   * Save a session file record
+   */
+  saveSessionFile(file: SessionFile): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO session_files (session_id, file_type, file_path, created_at, metadata)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      file.sessionId,
+      file.fileType,
+      file.filePath,
+      file.createdAt,
+      file.metadata ? JSON.stringify(file.metadata) : null,
+    );
   }
 
   /**

@@ -42,10 +42,7 @@ export class ToolRegistry {
         }
       } catch (error) {
         // Category directory doesn't exist yet - skip
-        this.logger.browser(
-          "debug",
-          `Category ${category} not found, skipping`,
-        );
+        this.logger.browser("info", `Category ${category} not found, skipping`);
       }
     }
 
@@ -84,7 +81,7 @@ export class ToolRegistry {
       }
 
       this.tools.set(tool.name, tool);
-      this.logger.browser("debug", `Registered tool: ${tool.name}`, {
+      this.logger.browser("info", `Registered tool: ${tool.name}`, {
         category,
       });
     } catch (error) {
