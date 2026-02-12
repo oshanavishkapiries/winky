@@ -84,6 +84,11 @@ async function main() {
       {
         browserManager,
         pageManager,
+        sessionId: memoryManager?.getCurrentSessionId() || "no-session",
+        sessionManager: memoryManager
+          ? (memoryManager as any).sessionManager
+          : null!,
+        memoryStore: memoryManager ? memoryManager.getStore() : null!,
       },
       memoryManager || undefined,
     );

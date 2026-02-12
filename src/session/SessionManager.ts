@@ -23,7 +23,7 @@ export class SessionManager {
     }
 
     // Create subfolders
-    const subfolders = ["screenshots", "pdfs", "uploads"];
+    const subfolders = ["screenshots", "pdfs", "uploads", "datasets"];
     for (const folder of subfolders) {
       const folderPath = resolve(sessionPath, folder);
       if (!existsSync(folderPath)) {

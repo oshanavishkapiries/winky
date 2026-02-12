@@ -1,6 +1,8 @@
 import type { ZodSchema } from "zod";
 import type { BrowserManager } from "../browser/BrowserManager.js";
 import type { PageManager } from "../browser/PageManager.js";
+import type { SessionManager } from "../session/SessionManager.js";
+import type { SQLiteStore } from "../memory/SQLiteStore.js";
 
 /**
  * Tool execution context
@@ -9,6 +11,9 @@ import type { PageManager } from "../browser/PageManager.js";
 export interface ToolContext {
   browserManager: BrowserManager;
   pageManager: PageManager;
+  sessionId: string;
+  sessionManager: SessionManager;
+  memoryStore: SQLiteStore;
 }
 
 /**

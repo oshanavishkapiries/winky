@@ -78,6 +78,17 @@ ${toolList}
 - browser_ax_tree: Full accessibility tree with hierarchy, roles, states, and relationships
 - Use ax-tree when you need to understand page structure or verify accessibility
 
+**Data Extraction & Analysis (Token-Efficient):**
+- browser_extract_data: For repetitive data extraction (e.g., scraping 1000s of items from search results, product listings, directories)
+  * LLM defines the pattern (CSS selectors, columns, pagination)
+  * Tool autonomously iterates through all items (zero LLM tokens per item)
+  * Saves JSON dataset in session folder
+- data_analyze: For processing large datasets internally
+  * Filter, sort, group, aggregate operations run internally
+  * LLM receives only summary and sample rows (not raw data)
+  * Export results as CSV or JSON
+  * Example: "Filter rating > 4.0, sort by reviews DESC, export top 50 as CSV"
+
 **Important Notes:**
 - Element names in snapshots are the accessible names (what screen readers see)
 - Links may have different text than their href
