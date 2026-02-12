@@ -21,6 +21,12 @@ const ClickSchema = z.object({
     .array(z.enum(["Alt", "Control", "Meta", "Shift"]))
     .optional()
     .describe("Keyboard modifiers"),
+  force: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Force click even if element is obscured by overlays (use for stubborn elements)",
+    ),
 });
 
 /**
@@ -37,7 +43,7 @@ export default class ClickTool extends BaseTool {
     params: unknown,
     context: ToolContext,
   ): Promise<ToolResult> {
-    const { ref, clickCount, button, modifiers } = params as z.infer<
+    const { ref, clickCount, button, modifiers, force } = params as z.infer<
       typeof ClickSchema
     >;
 
@@ -51,6 +57,7 @@ export default class ClickTool extends BaseTool {
       clickCount,
       button,
       modifiers,
+      force,
     });
 
     return {
@@ -59,6 +66,7 @@ export default class ClickTool extends BaseTool {
         ref,
         clickCount,
         button,
+        force,
       },
     };
   }
