@@ -2,7 +2,6 @@ import { z } from "zod";
 import { BaseTool } from "../BaseTool.js";
 import type { ToolContext, ToolResult } from "../ITool.js";
 import { humanBehavior } from "../../utils/HumanBehavior.js";
-import { smartLocate } from "../../utils/smartLocate.js";
 
 const TypeSchema = z.object({
   ref: z.string().describe("Element reference/selector"),
@@ -32,7 +31,66 @@ export default class TypeTool extends BaseTool {
     const { ref, text, delay, submit } = params as z.infer<typeof TypeSchema>;
 
     const page = await context.pageManager.getCurrentPage();
-    const locator = await smartLocate(page, ref);
+    const typeFirstStrategies = [
+      () => page.getByRole("textbox", { name: ref, exact: true }),
+      () => page.getByRole("searchbox", { name: ref, exact: true }),
+      () => page.getByRole("combobox", { name: ref, exact: true }),
+      () => page.getByLabel(ref),
+      () => page.getByPlaceholder(ref),
+    ];
+
+    let locator: any = null;
+    for (const buildLocator of typeFirstStrategies) {
+      const candidate = buildLocator();
+      if ((await candidate.count()) > 0) {
+        locator = candidate.first();
+        break;
+      }
+    }
+
+    if (!locator) {
+      throw new Error(
+        `No editable element found for ref '${ref}'. Use an exact accessible name from ax-tree/snapshot (for example the combobox name) and try again.`,
+      );
+    }
+
+    const editableInfo = await locator.evaluate((el: any) => {
+      const node = el as any;
+      const tagName = node.tagName.toLowerCase();
+      const role = node.getAttribute("role") || "";
+      const contentEditable = !!node.isContentEditable;
+
+      const isTextInput =
+        tagName === "textarea" ||
+        (tagName === "input" &&
+          ![
+            "button",
+            "submit",
+            "reset",
+            "checkbox",
+            "radio",
+            "file",
+            "image",
+            "range",
+            "color",
+          ].includes(node.type || "text"));
+
+      const isAriaEditableRole = ["textbox", "searchbox", "combobox"].includes(
+        role,
+      );
+
+      return {
+        tagName,
+        role,
+        isEditable: contentEditable || isTextInput || isAriaEditableRole,
+      };
+    });
+
+    if (!editableInfo.isEditable) {
+      throw new Error(
+        `Ref '${ref}' matched a non-editable element (tag=${editableInfo.tagName}, role=${editableInfo.role || "none"}). Select a textbox/searchbox/combobox or input field before typing.`,
+      );
+    }
 
     // Clear existing content first
     await locator.click();

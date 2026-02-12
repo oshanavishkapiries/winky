@@ -19,6 +19,8 @@ export class Orchestrator {
   private steps: AgentStep[] = [];
   private memory: MemoryManager | null = null;
   private currentSessionId: string | null = null;
+  private axTreeUnavailable = false;
+  private forceSnapshotNextStep = false;
 
   constructor(
     llmProvider: ILLMProvider,
@@ -129,19 +131,69 @@ Begin each task by understanding the goal, then plan your approach step by step.
       this.memory.saveMessage(this.currentSessionId, "user", userRequest);
     }
 
+    // Probe ax-tree once per runtime and remove it from planning if unavailable.
+    if (!this.axTreeUnavailable && this.toolRegistry.hasTool("browser_ax_tree")) {
+      try {
+        const axTool = this.toolRegistry.getTool("browser_ax_tree");
+        const axProbe = await axTool.execute({}, this.toolContext);
+
+        if (!axProbe.success) {
+          const errorText = String(axProbe.error || "");
+          if (errorText.includes("Accessibility API not available")) {
+            this.axTreeUnavailable = true;
+            this.conversationHistory.push({
+              role: "assistant",
+              content:
+                "Tool browser_ax_tree is unavailable in this browser runtime. Do not call browser_ax_tree again in this session; use browser_snapshot for page understanding.",
+            });
+          }
+        } else {
+          // ax-tree is available - prefer it by default.
+          this.forceSnapshotNextStep = false;
+        }
+      } catch {
+        // Ignore probe errors and continue normal planning.
+      }
+    }
+
     for (let step = 0; step < maxSteps; step++) {
       this.logger.workflow("info", `Step ${step + 1}/${maxSteps}`);
 
       // Plan: Get LLM decision
-      const tools = this.toolRegistry.listTools().map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        parameters: zodToJsonSchema(tool.parameters) as Record<string, unknown>,
-      }));
+      const tools = this.toolRegistry
+        .listTools()
+        .filter((tool) => {
+          // If ax-tree is unavailable, never expose it.
+          if (this.axTreeUnavailable && tool.name === "browser_ax_tree") {
+            return false;
+          }
+
+          // Strict policy: when ax-tree is available, prefer it and hide snapshot
+          // except when we explicitly need one fallback step.
+          if (!this.axTreeUnavailable && !this.forceSnapshotNextStep) {
+            if (tool.name === "browser_snapshot") {
+              return false;
+            }
+          }
+
+          // If fallback step is requested, force snapshot by hiding ax-tree once.
+          if (!this.axTreeUnavailable && this.forceSnapshotNextStep) {
+            if (tool.name === "browser_ax_tree") {
+              return false;
+            }
+          }
+
+          return true;
+        })
+        .map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          parameters: zodToJsonSchema(tool.parameters) as Record<string, unknown>,
+        }));
 
       const response = await this.llmProvider.chat(this.conversationHistory, {
         tools,
-        temperature: 0.7,
+        temperature: 0.2,
       });
 
       // Check if LLM wants to use tools
@@ -217,6 +269,38 @@ Begin each task by understanding the goal, then plan your approach step by step.
           const observationMessage = result.success
             ? `Tool ${toolCall.name} succeeded. Result: ${JSON.stringify(result.data)}`
             : `Tool ${toolCall.name} failed. Error: ${result.error}`;
+
+          // Enforce strict ax-tree/snapshot switching policy.
+          if (toolCall.name === "browser_ax_tree") {
+            if (!result.success) {
+              const errorText = String(result.error || "");
+
+              if (errorText.includes("Accessibility API not available")) {
+                this.axTreeUnavailable = true;
+                this.forceSnapshotNextStep = false;
+                this.conversationHistory.push({
+                  role: "assistant",
+                  content:
+                    "browser_ax_tree is unavailable in this runtime. Switch to browser_snapshot for all future page understanding steps.",
+                });
+              } else {
+                // Transient failure: request one snapshot fallback step, then return to ax-tree.
+                this.forceSnapshotNextStep = true;
+                this.conversationHistory.push({
+                  role: "assistant",
+                  content:
+                    "browser_ax_tree failed for this step. Use browser_snapshot on the next step as fallback, then continue with browser_ax_tree.",
+                });
+              }
+            } else {
+              this.forceSnapshotNextStep = false;
+            }
+          }
+
+          if (toolCall.name === "browser_snapshot" && this.forceSnapshotNextStep) {
+            // One-time fallback consumed, switch back to ax-tree.
+            this.forceSnapshotNextStep = false;
+          }
 
           this.conversationHistory.push({
             role: "assistant",
