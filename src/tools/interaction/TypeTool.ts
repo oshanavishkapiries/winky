@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BaseTool } from "../BaseTool.js";
 import type { ToolContext, ToolResult } from "../ITool.js";
+import { humanBehavior } from "../../utils/HumanBehavior.js";
 
 const TypeSchema = z.object({
   ref: z.string().describe("Element reference/selector"),
@@ -9,7 +10,7 @@ const TypeSchema = z.object({
     .number()
     .min(0)
     .default(0)
-    .describe("Delay in ms between keystrokes"),
+    .describe("Delay in ms between keystrokes (0 = human-like random)"),
   submit: z.boolean().default(false).describe("Press Enter after typing"),
 });
 
@@ -32,7 +33,18 @@ export default class TypeTool extends BaseTool {
     const page = await context.pageManager.getCurrentPage();
     const locator = page.locator(ref);
 
-    await locator.type(text, { delay });
+    // Use human-like typing if delay is 0 (default)
+    if (delay === 0) {
+      // Human-like typing with random delays (50-150ms per character)
+      await locator.click(); // Focus the element
+      for (const char of text) {
+        await humanBehavior.randomDelay(50, 150);
+        await locator.pressSequentially(char);
+      }
+    } else {
+      // Use specified delay
+      await locator.type(text, { delay });
+    }
 
     if (submit) {
       await locator.press("Enter");

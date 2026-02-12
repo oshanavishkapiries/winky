@@ -76,6 +76,48 @@ export class BrowserManager {
         }),
         headless: this.config.headless,
         viewport: this.config.viewport,
+        // Stealth options to avoid bot detection
+        args: [
+          "--disable-blink-features=AutomationControlled",
+          "--disable-dev-shm-usage",
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-web-security",
+        ],
+        // Realistic user agent
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      });
+
+      // Remove webdriver flag and add realistic properties
+      // Use globalThis to access browser context globals
+      await this.context.addInitScript(() => {
+        const win = globalThis as any;
+        const nav = win.navigator;
+
+        Object.defineProperty(nav, "webdriver", {
+          get: () => undefined,
+        });
+
+        win.chrome = {
+          runtime: {},
+        };
+
+        const originalQuery = nav.permissions.query;
+        nav.permissions.query = (parameters: any) =>
+          parameters.name === "notifications"
+            ? Promise.resolve({
+                state: win.Notification.permission,
+              })
+            : originalQuery(parameters);
+
+        Object.defineProperty(nav, "plugins", {
+          get: () => [1, 2, 3, 4, 5],
+        });
+
+        Object.defineProperty(nav, "languages", {
+          get: () => ["en-US", "en"],
+        });
       });
 
       this.logger.browser("info", "Browser launched with persistent context");
