@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BaseTool } from "../BaseTool.js";
 import type { ToolContext, ToolResult } from "../ITool.js";
 import { humanBehavior } from "../../utils/HumanBehavior.js";
+import { smartLocate } from "../../utils/smartLocate.js";
 
 const TypeSchema = z.object({
   ref: z.string().describe("Element reference/selector"),
@@ -31,19 +32,22 @@ export default class TypeTool extends BaseTool {
     const { ref, text, delay, submit } = params as z.infer<typeof TypeSchema>;
 
     const page = await context.pageManager.getCurrentPage();
-    const locator = page.locator(ref);
+    const locator = await smartLocate(page, ref);
+
+    // Clear existing content first
+    await locator.click();
+    await locator.fill("");
 
     // Use human-like typing if delay is 0 (default)
     if (delay === 0) {
       // Human-like typing with random delays (50-150ms per character)
-      await locator.click(); // Focus the element
       for (const char of text) {
         await humanBehavior.randomDelay(50, 150);
         await locator.pressSequentially(char);
       }
     } else {
       // Use specified delay
-      await locator.type(text, { delay });
+      await locator.pressSequentially(text, { delay });
     }
 
     if (submit) {

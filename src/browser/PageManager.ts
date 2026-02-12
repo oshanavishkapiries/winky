@@ -1,9 +1,4 @@
-import type {
-  Page,
-  BrowserContext,
-  ConsoleMessage,
-  Request,
-} from "playwright-core";
+import type { Page, BrowserContext, ConsoleMessage, Request } from "playwright";
 import { getLogger } from "../logger/Logger.js";
 import { BrowserError } from "../utils/errors.js";
 

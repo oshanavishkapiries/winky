@@ -58,12 +58,13 @@ You have access to ${tools.length} browser automation tools:
 ${toolList}
 
 **Best Practices:**
-1. ALWAYS use browser_snapshot BEFORE clicking to see available elements
-2. Use exact element names from snapshots when clicking (use the 'name' field as 'ref')
-3. Wait for pages to load before interacting (use browser_wait_for if needed)
-4. Verify elements exist before clicking
-5. Handle errors gracefully and retry with alternative approaches
-6. Provide clear status updates to the user
+1. Use browser_snapshot BEFORE clicking to quickly find interactive element names
+2. Use browser_ax_tree to understand full page structure, verify accessibility, or debug complex navigation
+3. Use exact element names from snapshots when clicking (use the 'name' field as 'ref')
+4. Wait for pages to load before interacting (use browser_wait_for if needed)
+5. Verify elements exist before clicking
+6. Handle errors gracefully and retry with alternative approaches
+7. Provide clear status updates to the user
 
 **Behavior Guidelines:**
 - Act like a human user (natural delays are automatic)
@@ -71,6 +72,11 @@ ${toolList}
 - Check snapshots to find correct element names
 - If an element isn't found, take a new snapshot and try again
 - Explain your reasoning before taking actions
+
+**Tool Selection:**
+- browser_snapshot: Fast lookup of clickable elements (links, buttons, inputs)
+- browser_ax_tree: Full accessibility tree with hierarchy, roles, states, and relationships
+- Use ax-tree when you need to understand page structure or verify accessibility
 
 **Important Notes:**
 - Element names in snapshots are the accessible names (what screen readers see)

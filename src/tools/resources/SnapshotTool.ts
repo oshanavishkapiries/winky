@@ -13,7 +13,7 @@ const SnapshotSchema = z.object({
 export default class SnapshotTool extends BaseTool {
   readonly name = "browser_snapshot";
   readonly description =
-    "Get page structure showing clickable elements with their accessible names and roles. Use this before clicking to find the correct element names.";
+    "Get interactive elements (links, buttons, inputs) with their accessible names via DOM queries. Use this for quick element lookup before clicking. For the full accessibility tree structure, use browser_ax_tree instead.";
   readonly parameters = SnapshotSchema;
   readonly readOnly = true;
 

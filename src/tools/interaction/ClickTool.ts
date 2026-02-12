@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BaseTool } from "../BaseTool.js";
 import type { ToolContext, ToolResult } from "../ITool.js";
 import { humanBehavior } from "../../utils/HumanBehavior.js";
+import { smartLocate } from "../../utils/smartLocate.js";
 
 const ClickSchema = z.object({
   ref: z.string().describe("Element reference/selector"),
@@ -41,7 +42,7 @@ export default class ClickTool extends BaseTool {
     >;
 
     const page = await context.pageManager.getCurrentPage();
-    const locator = page.locator(ref);
+    const locator = await smartLocate(page, ref);
 
     // Add human-like delay before clicking
     await humanBehavior.randomDelay(100, 300);
