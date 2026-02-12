@@ -5,14 +5,14 @@ import type { Page, Locator } from "playwright";
  * Prioritizes accessible name matching (what browser_snapshot returns)
  */
 export async function smartLocate(page: Page, ref: string): Promise<Locator> {
-  // Strategy 1: Try as accessible name with common roles
+  // Strategy 1: Try as accessible name with common roles (EXACT match)
   // This matches what browser_snapshot returns
   const commonRoles = [
-    "button",
-    "link",
     "textbox",
     "searchbox",
     "combobox",
+    "button",
+    "link",
     "input",
     "heading",
     "tab",
@@ -21,7 +21,8 @@ export async function smartLocate(page: Page, ref: string): Promise<Locator> {
 
   for (const role of commonRoles) {
     try {
-      const locator = page.getByRole(role as any, { name: ref });
+      // Use exact: true to avoid partial matches like "Search by voice" matching "Search"
+      const locator = page.getByRole(role as any, { name: ref, exact: true });
       // Check if element exists (with short timeout)
       const count = await locator.count();
       if (count > 0) {
