@@ -2,10 +2,26 @@ const { getWebSnapshot } = require('../utils/accessibility-utils');
 const fs = require('fs');
 const path = require('path');
 
+let lastMapping = {};
+
+const resolveElement = async (page, ref) => {
+  const backendNodeId = lastMapping[ref];
+  if (!backendNodeId) throw new Error(`Reference ID ${ref} not found in last snapshot.`);
+  
+  const client = await page.context().newCDPSession(page);
+  const { object } = await client.send('DOM.resolveNode', { backendNodeId });
+  const handle = await page.evaluateHandle(obj => obj, object);
+  const element = handle.asElement();
+  if (!element) throw new Error(`Could not resolve ref ${ref} to a DOM element.`);
+  return element;
+};
+
 const browserTools = (page) => ({
   snapshot: async () => {
     try {
-      return await getWebSnapshot(page);
+      const { markdown, mapping } = await getWebSnapshot(page);
+      lastMapping = mapping; // Store for subsequent tool calls
+      return markdown;
     } catch (error) {
       return `Error capturing snapshot: ${error.message}`;
     }
@@ -13,34 +29,25 @@ const browserTools = (page) => ({
 
   click: async ({ ref }) => {
     try {
-      const selector = `[data-backend-node-id="${ref}"]`;
-      const locator = page.locator(selector).first();
-      
-      await locator.waitFor({ state: 'visible', timeout: 5000 });
-      await locator.scrollIntoViewIfNeeded();
-      await locator.click();
-      
+      const element = await resolveElement(page, ref);
+      await element.scrollIntoViewIfNeeded();
+      await element.click({ timeout: 5000 });
       return `Successfully clicked on ref ${ref}`;
     } catch (error) {
-      return `Failed to click ref ${ref}: ${error.message}. If the element is blocked by an overlay, handle the overlay first.`;
+      return `Failed to click ref ${ref}: ${error.message}. If blocked by an overlay, handle it first.`;
     }
   },
 
   type_text: async ({ ref, text }) => {
     try {
-      const selector = `[data-backend-node-id="${ref}"]`;
-      const locator = page.locator(selector).first();
-      
-      await locator.waitFor({ state: 'visible', timeout: 5000 });
-      await locator.scrollIntoViewIfNeeded();
-      
-      await locator.click();
-      await locator.fill(''); 
-      await locator.type(text, { delay: 50 });
-      
+      const element = await resolveElement(page, ref);
+      await element.scrollIntoViewIfNeeded();
+      await element.click();
+      await element.fill(''); 
+      await element.type(text, { delay: 50 });
       return `Successfully typed "${text}" into ref ${ref}`;
     } catch (error) {
-      return `Failed to type into ref ${ref}. The element might not be an input field or is blocked.`;
+      return `Failed to type into ref ${ref}: ${error.message}`;
     }
   },
 
@@ -56,8 +63,8 @@ const browserTools = (page) => ({
   scroll: async ({ direction, ref }) => {
     try {
       if (ref) {
-        const locator = page.locator(`[data-backend-node-id="${ref}"]`).first();
-        await locator.scrollIntoViewIfNeeded({ timeout: 5000 });
+        const element = await resolveElement(page, ref);
+        await element.scrollIntoViewIfNeeded();
         return `Successfully scrolled to ref ${ref}`;
       }
       const distance = direction === 'down' ? 600 : -600;

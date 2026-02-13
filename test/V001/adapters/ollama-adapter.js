@@ -3,7 +3,7 @@ const axios = require('axios');
 const { saveChatLog } = require('../utils/debug-utils');
 
 class OllamaAdapter {
-  constructor(model = 'llama3.1:8b', baseUrl = 'https://816c-34-16-225-207.ngrok-free.app') {
+  constructor(model = 'llama3.1:8b', baseUrl = 'https://e4fc-34-16-225-207.ngrok-free.app') {
     this.model = model;
     this.baseUrl = baseUrl;
   }

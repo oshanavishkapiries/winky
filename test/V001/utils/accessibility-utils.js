@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+// Utility to filter and optimize nodes
 function filterAccessibilityTree(nodes) {
   return nodes
     .filter(node => !node.ignored && node.role?.value !== 'none')
@@ -28,37 +30,27 @@ function convertToMarkdown(nodes) {
 }
 
 /**
- * Captures the tree AND injects IDs into the DOM so Playwright can find them.
+ * Captures the tree and returns markdown + a mapping of nodeId to backendDOMNodeId
  */
 async function getWebSnapshot(page) {
   const client = await page.context().newCDPSession(page);
   await client.send('DOM.enable');
-
   const { nodes } = await client.send('Accessibility.getFullAXTree');
-
-  for (const node of nodes) {
-    if (node.backendDOMNodeId && !node.ignored) {
-      try {
-        const { nodeId: internalDOMNodeId } = await client.send('DOM.requestNode', { 
-          backendNodeId: node.backendDOMNodeId 
-        });
-        
-        await client.send('DOM.setAttributeValue', {
-          nodeId: internalDOMNodeId,
-          name: 'data-backend-node-id',
-          value: node.nodeId.toString()
-        });
-      } catch (err) {
-        // Silently fail for nodes that aren't reachable or don't support attributes
-      }
+  
+  const mapping = {};
+  nodes.forEach(node => {
+    if (node.backendDOMNodeId) {
+      mapping[node.nodeId] = node.backendDOMNodeId;
     }
-  }
+  });
 
   const optimizedNodes = filterAccessibilityTree(nodes);
-  return convertToMarkdown(optimizedNodes);
+  const markdown = convertToMarkdown(optimizedNodes);
+
+  return { markdown, mapping };
 }
 
-module.exports = {
+module.exports = { 
   getWebSnapshot,
   filterAccessibilityTree,
   convertToMarkdown
