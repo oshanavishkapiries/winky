@@ -146,8 +146,8 @@ app.get("/api/output", (req, res) => {
 });
 
 // READ: Force Download a specific file
-app.get("/api/output/download/*", (req, res) => {
-  const filePath = (req.params as any)[0];
+app.get(/^\/api\/output\/download\/(.*)$/, (req, res) => {
+  const filePath = String((req.params as any)[0]);
   const targetPath = getSafePath(filePath);
 
   if (!targetPath || !fs.existsSync(targetPath)) {
@@ -163,44 +163,49 @@ app.get("/api/output/download/*", (req, res) => {
 import uploadFactory from "multer";
 const upload = uploadFactory({ dest: "tmp_uploads/" }); // Temp staging
 
-app.post("/api/output/upload/*", upload.single("file"), (req, res) => {
-  if (!req.file)
-    return res.status(400).json({
-      success: false,
-      error: "No file provided. Use form-data 'file' field.",
-    });
-
-  const targetSubPath = (req.params as any)[0];
-  const targetPath = getSafePath(targetSubPath);
-
-  if (!targetPath) {
-    fs.unlinkSync(req.file.path); // Cleanup temp file
-    return res
-      .status(400)
-      .json({ success: false, error: "Invalid upload path." });
-  }
-
-  try {
-    const dir = path.dirname(targetPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+app.post(
+  /^\/api\/output\/upload\/(.*)$/,
+  upload.single("file"),
+  (req: any, res: any) => {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: "No file provided. Use form-data 'file' field.",
+      });
     }
 
-    // Move from temp staging to final destination securely
-    fs.renameSync(req.file.path, targetPath);
-    res.json({
-      success: true,
-      message: `File successfully saved to ${targetSubPath}`,
-    });
-  } catch (err: any) {
-    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+    const targetSubPath = String((req.params as any)[0]);
+    const targetPath = getSafePath(targetSubPath);
+
+    if (!targetPath) {
+      fs.unlinkSync(req.file.path); // Cleanup temp file
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid upload path." });
+    }
+
+    try {
+      const dir = path.dirname(targetPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Move from temp staging to final destination securely
+      fs.renameSync(req.file.path, targetPath);
+      res.json({
+        success: true,
+        message: `File successfully saved to ${targetSubPath}`,
+      });
+    } catch (err: any) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  },
+);
 
 // DELETE: Remove a specific file
-app.delete("/api/output/*", (req, res) => {
-  const filePath = (req.params as any)[0];
+app.delete(/^\/api\/output\/(.*)$/, (req, res) => {
+  const filePath = String((req.params as any)[0]);
   const targetPath = getSafePath(filePath);
 
   if (!targetPath || !fs.existsSync(targetPath)) {
