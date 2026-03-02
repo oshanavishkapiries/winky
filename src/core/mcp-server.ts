@@ -114,6 +114,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {},
         },
       },
+      {
+        name: "winky_reload",
+        description: "Reloads the current active page in the Winky browser.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "winky_close",
+        description:
+          "Closes the current page and shuts down the active Winky browser profile entirely.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -180,6 +197,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `Global storage state saved to ${config.storageStatePath}`,
             },
           ],
+        };
+      }
+
+      case "winky_reload": {
+        await page.reload({ waitUntil: "domcontentloaded" });
+        return {
+          content: [{ type: "text", text: `Active page reloaded.` }],
+        };
+      }
+
+      case "winky_close": {
+        await saveStorageState(context, config.storageStatePath);
+        await context.close().catch(() => {});
+        globalContext = null;
+        activePage = null;
+        return {
+          content: [{ type: "text", text: `Browser profile closed securely.` }],
         };
       }
 

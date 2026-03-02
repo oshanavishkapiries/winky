@@ -1,6 +1,7 @@
 export const config = {
   // --- Core Application Defaults ---
-  headless: false,
+  // If running inside a Docker container, headless MUST be true
+  headless: process.env.DOCKER_ENV === "true" ? true : false,
   slowMo: 0,
 
   // --- Global Directories & State ---

@@ -116,10 +116,17 @@ async function showInteractiveMenu() {
 }
 
 // Boot
-showInteractiveMenu().catch((err) => {
-  log.error(`Fatal TUI Error: ${err}`);
-  process.exit(1);
-});
+if (process.env.DOCKER_ENV === "true") {
+  log.info(
+    `[Docker] Bypassing Interactive TUI. Booting REST Server implicitly...`,
+  );
+  startApiServer();
+} else {
+  showInteractiveMenu().catch((err) => {
+    log.error(`Fatal TUI Error: ${err}`);
+    process.exit(1);
+  });
+}
 
 // Graceful Shutdown Handlers
 process.on("SIGINT", () => {
