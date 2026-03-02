@@ -1,10 +1,9 @@
 import type { Page } from "playwright";
-import { config } from "../config";
-import { log } from "../core/logger";
+import { log } from "../../core/logger";
 
 export async function exampleTask(page: Page) {
-  log.info(`Going to ${config.baseUrl}`);
-  await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
+  log.info(`Going to "google.com"`);
+  await page.goto("https://www.google.com", { waitUntil: "domcontentloaded" });
 
   const title = await page.title();
   log.info(`Title: ${title}`);

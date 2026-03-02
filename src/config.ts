@@ -3,7 +3,6 @@ import "dotenv/config";
 export const config = {
   headless: process.env.HEADLESS === "true",
   slowMo: Number(process.env.SLOW_MO ?? 0),
-  baseUrl: process.env.BASE_URL ?? "https://example.com",
   profileDir: process.env.PROFILE_DIR ?? "./profiles/default",
   storageStatePath: process.env.STORAGE_STATE ?? "./src/storage/state.json",
   downloadsDir: process.env.DOWNLOADS_DIR ?? "./output/downloads",

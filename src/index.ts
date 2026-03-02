@@ -3,7 +3,8 @@ import path from "node:path";
 import { createPersistentContext, saveStorageState } from "./core/context";
 import { log } from "./core/logger";
 import { config } from "./config";
-import { exampleTask } from "./modules/exampleTask";
+import { googleMapsDataExtract } from "./modules/google-maps-extract/google-maps-data-extract";
+
 
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
@@ -18,7 +19,7 @@ async function main() {
   const page = context.pages()[0] ?? (await context.newPage());
 
   try {
-    await exampleTask(page);
+    await googleMapsDataExtract(page);
 
     // Save updated cookies/localstorage/session for next run
     await saveStorageState(context);
