@@ -7,25 +7,25 @@
     "dev": "ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "module:google-maps-extract": "ts-node src/modules/google-maps-extract/index.ts"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@types/node-cron": "^3.0.11",
+    "@types/express": "^5.0.6",
     "@types/pg": "^8.18.0",
-    "dotenv": "^17.3.1",
+    "@types/prompts": "^2.4.9",
     "playwright": "^1.58.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "node-cron": "^4.2.1",
+    "express": "^5.2.1",
     "pg": "^8.19.0",
     "playwright-extra": "^4.3.6",
+    "prompts": "^2.4.2",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }

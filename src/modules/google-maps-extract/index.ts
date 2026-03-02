@@ -9,27 +9,30 @@ import { googleMapsDataExtract } from "./google-maps-data-extract";
 // Encapsulated Module Configuration
 export const moduleConfig = {
   name: "google-maps-extract",
-  schedule: process.env.CRON_GOOGLE_MAPS ?? "0 0 * * *", // Default run at midnight
-
   // Localized directories ensuring no session cross-contamination
   profileDir: path.resolve(__dirname, "./profiles/default"),
   storageStatePath: path.resolve(__dirname, "./storage/state.json"),
 };
 
-let isRunning = false;
+let _isRunning = false;
+
+// Expose state to the API
+export function isRunning() {
+  return _isRunning;
+}
 
 /**
  * Encapsulated execution script for this module alone.
  * It strictly uses the local profile and local storage.
  */
 export async function run() {
-  if (isRunning) {
+  if (_isRunning) {
     log.warn(
-      `[${moduleConfig.name}] Previous scheduled task is still running. Skipping tick.`,
+      `[${moduleConfig.name}] Previous API task is still running. Skipping trigger.`,
     );
     return;
   }
-  isRunning = true;
+  _isRunning = true;
   let context;
 
   try {
@@ -59,7 +62,7 @@ export async function run() {
       log.info(`[${moduleConfig.name}] Closing local browser context...`);
       await context.close().catch(() => {});
     }
-    isRunning = false;
+    _isRunning = false;
   }
 }
 

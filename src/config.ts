@@ -1,15 +1,17 @@
-import "dotenv/config";
-
 export const config = {
-  headless: process.env.HEADLESS === "true",
-  slowMo: Number(process.env.SLOW_MO ?? 0),
-  profileDir: process.env.PROFILE_DIR ?? "./profiles/default",
-  storageStatePath: process.env.STORAGE_STATE ?? "./src/storage/state.json",
-  downloadsDir: process.env.DOWNLOADS_DIR ?? "./output/downloads",
-  screenshotsDir: process.env.SCREENSHOTS_DIR ?? "./output/screenshots",
+  // --- Core Application Defaults ---
+  headless: false,
+  slowMo: 0,
+
+  // --- Global Directories ---
+  downloadsDir: "./output/downloads",
+  screenshotsDir: "./output/screenshots",
+
+  // --- Server / API Details ---
+  serverPort: 3000,
+
+  // --- Database Connector ---
+  // The PostgreSQL URL used across modules requiring DB tracking
   databaseUrl:
-    process.env.DATABASE_URL ??
-    "postgresql://postgres:postgres@localhost:5432/winky",
-  cronSchedule: process.env.CRON_SCHEDULE ?? "0 0 * * *",
-  enableScheduler: process.env.ENABLE_SCHEDULER !== "false",
+    "postgresql://neondb_owner:npg_UtTfQva4jdY9@ep-empty-pond-ai7rsale-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
 };
