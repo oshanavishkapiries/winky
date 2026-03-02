@@ -59,6 +59,11 @@ async function showInteractiveMenu() {
         value: "start_api",
         description: "Boot the Express HTTP Server to remotely control modules",
       },
+      {
+        title: "Start AI MCP Server (StdIO)",
+        value: "start_mcp",
+        description: "Exposes Playwright stealth profile to external LLMs",
+      },
       { title: "Exit", value: "exit" },
     ],
   });
@@ -95,6 +100,14 @@ async function showInteractiveMenu() {
   } else if (response.action === "start_api") {
     startApiServer();
     // Do not loop, keep process listening infinitely
+  } else if (response.action === "start_mcp") {
+    log.info("Booting MCP Protocol on StdIO...");
+    // We launch it via ts-node directly taking over the current process's stdio
+    require("child_process").spawn(
+      "npx",
+      ["ts-node", path.resolve(__dirname, "./core/mcp-server.ts")],
+      { stdio: "inherit" },
+    );
   } else {
     log.info("Goodbye!");
     process.exit(0);

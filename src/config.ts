@@ -3,9 +3,11 @@ export const config = {
   headless: false,
   slowMo: 0,
 
-  // --- Global Directories ---
+  // --- Global Directories & State ---
   downloadsDir: "./output/downloads",
   screenshotsDir: "./output/screenshots",
+  profileDir: "./profiles/default",
+  storageStatePath: "./src/storage/state.json",
 
   // --- Server / API Details ---
   serverPort: 3000,

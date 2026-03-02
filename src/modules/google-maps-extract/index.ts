@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createPersistentContext, saveStorageState } from "../../core/context";
 import { log } from "../../core/logger";
+import { config } from "../../config";
 
 // Main extractor logic
 import { googleMapsDataExtract } from "./google-maps-data-extract";
@@ -9,9 +10,6 @@ import { googleMapsDataExtract } from "./google-maps-data-extract";
 // Encapsulated Module Configuration
 export const moduleConfig = {
   name: "google-maps-extract",
-  // Localized directories ensuring no session cross-contamination
-  profileDir: path.resolve(__dirname, "./profiles/default"),
-  storageStatePath: path.resolve(__dirname, "./storage/state.json"),
 };
 
 let _isRunning = false;
@@ -38,10 +36,10 @@ export async function run() {
   try {
     log.info(`[${moduleConfig.name}] Starting encapsulated execution...`);
 
-    // Boot using local profiles
+    // Boot using shared global profiles
     context = await createPersistentContext({
-      profileDir: moduleConfig.profileDir,
-      storageStatePath: moduleConfig.storageStatePath,
+      profileDir: config.profileDir,
+      storageStatePath: config.storageStatePath,
     });
 
     const page = context.pages()[0] ?? (await context.newPage());
@@ -49,8 +47,8 @@ export async function run() {
     // Execute core logic
     await googleMapsDataExtract(page);
 
-    // Save state back to local storage
-    await saveStorageState(context, moduleConfig.storageStatePath);
+    // Save state back to global storage
+    await saveStorageState(context, config.storageStatePath);
 
     log.info(`[${moduleConfig.name}] Execution finished successfully.`);
   } catch (error) {

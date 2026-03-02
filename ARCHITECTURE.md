@@ -4,10 +4,10 @@ This document is written as a strict system prompt and architecture guide for an
 
 ## Core Design Philosophy
 
-1. **Strict Data Encapsulation**: Every scraping script must be 100% physically isolated from other scripts. Browser profiles, cookies, and local session states MUST run inside the module's localized directory.
-2. **Zero `.env` or Cron**: The project does NOT use `dotenv` or `node-cron`. Global configurations are hardcoded centrally inside `src/config.ts`. Schedules are handled by external orchestrators hitting the API.
-3. **Dynamic Discovery**: The master Node.js daemon acts as a dynamic module loader. It scans `src/modules/` and automatically binds recognized modules to the TUI (Terminal Interface) and the REST API.
-4. **Common Core, Custom Modules**: All generic database connections, Playwright bootstraps, and HTTP APIs live in `src/core/`. Unique business logic, types, and database queries live strictly in `src/modules/{module-name}/`.
+1. **Unified Global Playwright Profile**: All modules and automated scripts share ONE single browser profile and storage state (cookies/sessions). These paths are defined globally in `src/config.ts`. You must NEVER create local isolated `./profiles` inside a module.
+2. **Native Playwright MCP Server**: An external AI can steer this project's fully authenticated profile dynamically. You can boot `npm run dev` and select "Start AI MCP Server" to launch a standard Model Context Protocol stdio server to investigate targets.
+3. **Zero `.env` or Cron**: The project does NOT use `dotenv` or `node-cron`. Global configurations are hardcoded centrally inside `src/config.ts`.
+4. **Dynamic Discovery**: The master Node.js daemon acts as a dynamic module loader. It scans `src/modules/` and automatically binds recognized modules to the TUI (Terminal Interface) and the REST API.
 
 ---
 
@@ -15,17 +15,16 @@ This document is written as a strict system prompt and architecture guide for an
 
 ```text
 /src
-  /config.ts         # Master global configuration (DB URL, common directories, Ports)
+  /config.ts         # Master global configuration (DB URL, Global Profile paths)
   /core
-    /context.ts      # Instantiates Playwright using context options passed by the module
+    /context.ts      # Instantiates Playwright using context options
+    /mcp-server.ts   # Model Context Protocol stdio server exposing Playwright to AIs
     /db.ts           # Centralized PostgreSQL connection pooling
     /server.ts       # Express REST API
     /logger.ts       # Centralized Winston/Console logger
   /modules
-    /{module-name}/  # Fully isolated module folder
+    /{module-name}/  # Dedicated module folder
       index.ts       # The mandatory entry point exposing standard interfaces
-      profiles/      # (Auto-generated) Local Playwright fingerprint & profile cache
-      storage/       # (Auto-generated) Local state.json containing auth cookies
 ```
 
 ---
@@ -36,7 +35,7 @@ When requested to create a new scraping module, the LLM MUST follow the architec
 
 ### 1. Folder Setup
 
-Always create a new dedicated folder inside `src/modules/`, for example `src/modules/instagram-scraper/`. All scripts, types, repository files, and SQL schemas for this specific task must live inside this folder.
+Always create a new dedicated folder inside `src/modules/`, for example `src/modules/linkedin-scraper/`. All scripts, types, repository files, and SQL schemas for this specific task must live inside this folder.
 
 ### 2. The `index.ts` Standard Interface
 
@@ -47,15 +46,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { createPersistentContext, saveStorageState } from "../../core/context";
 import { log } from "../../core/logger";
-
-// Import your custom module logic
-// import { yourScrapingLogic } from "./scraper";
+import { config } from "../../config";
 
 // 1. Module Configuration (Mandatory)
 export const moduleConfig = {
   name: "your-module-name-here", // Used for API routes and TUI lists
-  profileDir: path.resolve(__dirname, "./profiles/default"),
-  storageStatePath: path.resolve(__dirname, "./storage/state.json"),
 };
 
 // 2. Active State Tracking (Mandatory)
@@ -69,7 +64,7 @@ export function isRunning() {
 export async function run() {
   if (_isRunning) {
     log.warn(
-      `[${moduleConfig.name}] Previous API task is still running. Skipping.`,
+      `[${moduleConfig.name}] Previous task is still running. Skipping.`,
     );
     return;
   }
@@ -77,28 +72,30 @@ export async function run() {
   let context;
 
   try {
-    log.info(`[${moduleConfig.name}] Starting encapsulated execution...`);
+    log.info(
+      `[${moduleConfig.name}] Starting execution using global profile...`,
+    );
 
-    // Boot using LOCAL module-specific profiles
+    // Boot using shared global Playwright profiles
     context = await createPersistentContext({
-      profileDir: moduleConfig.profileDir,
-      storageStatePath: moduleConfig.storageStatePath,
+      profileDir: config.profileDir,
+      storageStatePath: config.storageStatePath,
     });
 
-    const page = context.pages()[0] ?? (await context.newPage());
+    const page =
+      context.pages().length > 0 ? context.pages()[0] : await context.newPage();
 
     // --- EXECUTE CUSTOM LOGIC HERE ---
-    // await yourScrapingLogic(page);
+    // await page.goto("https://target-site.com");
     // ---------------------------------
 
-    // Save session state to the local isolated storage
-    await saveStorageState(context, moduleConfig.storageStatePath);
+    // Save session cookies back to the global unified state
+    await saveStorageState(context, config.storageStatePath);
     log.info(`[${moduleConfig.name}] Execution finished successfully.`);
   } catch (error) {
     log.error(`[${moduleConfig.name}] Critical execution error: ${error}`);
   } finally {
     if (context) {
-      log.info(`[${moduleConfig.name}] Closing local browser context...`);
       await context.close().catch(() => {});
     }
     _isRunning = false;
@@ -107,23 +104,15 @@ export async function run() {
 
 // 4. Standalone Execution Support
 if (require.main === module) {
-  log.info(`[${moduleConfig.name}] Initiating independent manual run...`);
-  run().then(() => {
-    log.info(`[${moduleConfig.name}] Manual run fully resolved.`);
-    process.exit(0);
-  });
+  run().then(() => process.exit(0));
 }
 ```
 
-### 3. Execution Integration
+### 3. AI-Driven Module Creation using the MCP
 
-You DO NOT need to touch `src/index.ts` or `src/core/server.ts` to register the new module!
-Once `index.ts` is saved, the dynamic scanner will automatically expose it to the `prompts` CLI Menu and mount it to `POST /api/modules/your-module-name-here/start`.
+If you are an AI assistant trying to build a scraping script for this project:
 
-### 4. Database Interactions
-
-If the module requires database tracking (like deduplication), the LLM must:
-
-- Write a `schema.sql` file inside the module folder.
-- Write a `repository.ts` file inside the module folder using `import { db } from "../../core/db";`.
-- Inject the repository methods into the core scraping logic file.
+1. Connect to the `winky-playwright-mcp` stdio server.
+2. Use `winky_navigate` to visit the target URL. You will inherit the user's cookies automatically because the MCP uses the exact same `config.profileDir` as the core executing logic.
+3. Use `winky_get_html` and `winky_evaluate` to identify the right Playwright selectors.
+4. Once you figure out the page structure, write the logic into the new module folder following the template above!
