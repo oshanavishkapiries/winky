@@ -1,46 +1,85 @@
 import fs from "node:fs";
-import path from "node:path";
 import { createPersistentContext, saveStorageState } from "./core/context";
-import { log } from "./core/logger";
 import { config } from "./config";
+import { log } from "./core/logger";
+import * as cron from "node-cron";
 
 // scripts
 import { googleMapsDataExtract } from "./modules/google-maps-extract/google-maps-data-extract";
-import { exampleTask } from "./modules/template/exampleTask";
 
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
 }
 
-async function main() {
-  ensureDir(config.screenshotsDir);
+// Ensure basic output folders
+ensureDir(config.downloadsDir);
+ensureDir(config.screenshotsDir);
 
-  const context = await createPersistentContext();
+let isTaskRunning = false;
 
-  // In persistent context, there may already be a page open
-  const page = context.pages()[0] ?? (await context.newPage());
+async function runScrapingTask() {
+  if (isTaskRunning) {
+    log.warn(
+      "A previous scraping task is still running. Skipping this cron tick.",
+    );
+    return;
+  }
+  isTaskRunning = true;
+  let context;
 
   try {
+    log.info("Starting scheduled Playwright scraping task...");
+
+    context = await createPersistentContext();
+    const page = context.pages()[0] ?? (await context.newPage());
+
+    // Execute Modules Here
     await googleMapsDataExtract(page);
-    //await exampleTask(page);
-  
 
     // Save updated cookies/localstorage/session for next run
     await saveStorageState(context);
-  } catch (err: any) {
-    log.error(`Run failed: ${err?.message ?? err}`);
 
-    const shot = path.join(config.screenshotsDir, `error-${Date.now()}.png`);
-    await page.screenshot({ path: shot, fullPage: true });
-    log.error(`Saved screenshot: ${shot}`);
-
-    throw err;
+    log.info("Scheduled scraping task finished successfully.");
+  } catch (error) {
+    log.error(`Critical error during scheduled task execution: ${error}`);
   } finally {
-    await context.close();
-    log.info("Done.");
+    if (context) {
+      log.info("Closing browser context...");
+      await context.close().catch(() => {});
+    }
+    isTaskRunning = false;
   }
 }
 
-main().catch((e) => {
-  process.exitCode = 1;
+// -----------------------------------------------------
+// BOOTSTRAP / SCHEDULER
+// -----------------------------------------------------
+
+log.info("====================================");
+log.info(`Winky Scraper Scheduler Started`);
+log.info(`Cron Expression: ${config.cronSchedule}`);
+log.info("====================================");
+
+// Validate Cron
+if (!cron.validate(config.cronSchedule)) {
+  log.error(
+    `Invalid cron expression defined in config: ${config.cronSchedule}`,
+  );
+  process.exit(1);
+}
+
+// Schedule the Job
+cron.schedule(config.cronSchedule, () => {
+  log.info(`Cron triggered at ${new Date().toISOString()}`);
+  runScrapingTask();
+});
+
+// Graceful Shutdown Handlers
+process.on("SIGINT", () => {
+  log.info("Received SIGINT. Shutting down gracefully...");
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  log.info("Received SIGTERM. Shutting down gracefully...");
+  process.exit(0);
 });
