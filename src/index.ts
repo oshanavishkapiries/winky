@@ -1,11 +1,8 @@
 import fs from "node:fs";
-import { createPersistentContext, saveStorageState } from "./core/context";
+import path from "node:path";
 import { config } from "./config";
 import { log } from "./core/logger";
 import * as cron from "node-cron";
-
-// scripts
-import { googleMapsDataExtract } from "./modules/google-maps-extract/google-maps-data-extract";
 
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
@@ -15,64 +12,71 @@ function ensureDir(p: string) {
 ensureDir(config.downloadsDir);
 ensureDir(config.screenshotsDir);
 
-let isTaskRunning = false;
-
-async function runScrapingTask() {
-  if (isTaskRunning) {
-    log.warn(
-      "A previous scraping task is still running. Skipping this cron tick.",
-    );
-    return;
-  }
-  isTaskRunning = true;
-  let context;
-
-  try {
-    log.info("Starting scheduled Playwright scraping task...");
-
-    context = await createPersistentContext();
-    const page = context.pages()[0] ?? (await context.newPage());
-
-    // Execute Modules Here
-    await googleMapsDataExtract(page);
-
-    // Save updated cookies/localstorage/session for next run
-    await saveStorageState(context);
-
-    log.info("Scheduled scraping task finished successfully.");
-  } catch (error) {
-    log.error(`Critical error during scheduled task execution: ${error}`);
-  } finally {
-    if (context) {
-      log.info("Closing browser context...");
-      await context.close().catch(() => {});
-    }
-    isTaskRunning = false;
-  }
-}
-
 // -----------------------------------------------------
 // BOOTSTRAP / SCHEDULER
 // -----------------------------------------------------
 
 log.info("====================================");
-log.info(`Winky Scraper Scheduler Started`);
-log.info(`Cron Expression: ${config.cronSchedule}`);
+log.info(`Winky Scraper Master Scheduler`);
 log.info("====================================");
 
-// Validate Cron
-if (!cron.validate(config.cronSchedule)) {
-  log.error(
-    `Invalid cron expression defined in config: ${config.cronSchedule}`,
+async function loadModules() {
+  if (!config.enableScheduler) {
+    log.info(
+      "[Scheduler] Scheduler is currently disabled via config (ENABLE_SCHEDULER). Exiting master loop.",
+    );
+    return;
+  }
+
+  const modulesPath = path.join(__dirname, "modules");
+  const directories = fs
+    .readdirSync(modulesPath, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+
+  let loadedModules = 0;
+
+  for (const dirName of directories) {
+    const moduleIndexPath = path.join(modulesPath, dirName, "index.ts");
+
+    // Only attempt to load isolated encapsulated modules if they expose an index.ts
+    // (Ignores template directories if they don't have an index.ts)
+    if (fs.existsSync(moduleIndexPath)) {
+      try {
+        const mod = require(moduleIndexPath);
+        if (mod.moduleConfig && mod.run) {
+          const scheduleStr = mod.moduleConfig.schedule;
+
+          if (!cron.validate(scheduleStr)) {
+            log.error(
+              `[Loader] Module '${mod.moduleConfig.name}' has invalid cron string: ${scheduleStr}`,
+            );
+            continue;
+          }
+
+          cron.schedule(scheduleStr, () => {
+            log.info(`[Scheduler] Triggering module: ${mod.moduleConfig.name}`);
+            mod.run();
+          });
+
+          log.info(
+            `[Loader] Successfully bound module '${mod.moduleConfig.name}' (Cron: ${scheduleStr})`,
+          );
+          loadedModules++;
+        }
+      } catch (e) {
+        log.warn(`[Loader] Failed to load module inside ${dirName}: ${e}`);
+      }
+    }
+  }
+
+  log.info(
+    `[Loader] Finished. Successfully bound scheduling to ${loadedModules} active module(s).`,
   );
-  process.exit(1);
 }
 
-// Schedule the Job
-cron.schedule(config.cronSchedule, () => {
-  log.info(`Cron triggered at ${new Date().toISOString()}`);
-  runScrapingTask();
-});
+// Boot the Master Loop
+loadModules();
 
 // Graceful Shutdown Handlers
 process.on("SIGINT", () => {

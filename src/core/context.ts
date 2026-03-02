@@ -12,15 +12,22 @@ function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
 }
 
-export async function createPersistentContext(): Promise<BrowserContext> {
-  ensureDir(config.profileDir);
+interface ContextOptions {
+  profileDir: string;
+  storageStatePath: string;
+}
+
+export async function createPersistentContext(
+  options: ContextOptions,
+): Promise<BrowserContext> {
+  ensureDir(options.profileDir);
   ensureDir(config.downloadsDir);
   ensureDir(config.screenshotsDir);
 
-  log.info(`Launching persistent context: ${config.profileDir}`);
+  log.info(`Launching persistent context: ${options.profileDir}`);
   log.info(`Headless=${config.headless}, slowMo=${config.slowMo}`);
 
-  const context = await chromium.launchPersistentContext(config.profileDir, {
+  const context = await chromium.launchPersistentContext(options.profileDir, {
     headless: config.headless,
     slowMo: config.slowMo,
     acceptDownloads: true,
@@ -41,10 +48,13 @@ export async function createPersistentContext(): Promise<BrowserContext> {
   return context;
 }
 
-export async function saveStorageState(context: BrowserContext) {
-  const dir = path.dirname(config.storageStatePath);
+export async function saveStorageState(
+  context: BrowserContext,
+  storagePath: string,
+) {
+  const dir = path.dirname(storagePath);
   ensureDir(dir);
 
-  await context.storageState({ path: config.storageStatePath });
-  log.info(`Saved storageState -> ${config.storageStatePath}`);
+  await context.storageState({ path: storagePath });
+  log.info(`Saved storageState -> ${storagePath}`);
 }

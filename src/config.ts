@@ -11,4 +11,5 @@ export const config = {
     process.env.DATABASE_URL ??
     "postgresql://postgres:postgres@localhost:5432/winky",
   cronSchedule: process.env.CRON_SCHEDULE ?? "0 0 * * *",
+  enableScheduler: process.env.ENABLE_SCHEDULER !== "false",
 };
