@@ -21,8 +21,8 @@ async function main() {
   const page = context.pages()[0] ?? (await context.newPage());
 
   try {
-    //await googleMapsDataExtract(page);
-    await exampleTask(page);
+    await googleMapsDataExtract(page);
+    //await exampleTask(page);
   
 
     // Save updated cookies/localstorage/session for next run
