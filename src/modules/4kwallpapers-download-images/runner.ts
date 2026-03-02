@@ -7,10 +7,10 @@ import {
   createRun,
   finishRun,
   getProgress,
+  getWallpaperStatus,
   initTables,
   markDownloaded,
   upsertWallpaper,
-  wallpaperExists,
   setProgress,
 } from "./repository";
 import {
@@ -120,13 +120,13 @@ export async function run4kWallpapersDownload(page: Page, options: RunOptions) {
       for (const item of items) {
         const pageUrl = item.detailUrl;
         const hashId = sha256Hex(pageUrl);
-        const existing = await wallpaperExists(hashId);
-        if (existing) {
+        const status = await getWallpaperStatus(hashId);
+        if (status?.downloaded_at) {
           stats.skippedExisting++;
           continue;
         }
 
-        stats.newItems++;
+        if (!status) stats.newItems++;
 
         log.info(`[4kwallpapers] New wallpaper: ${pageUrl}`);
         await page.goto(pageUrl, {
@@ -169,6 +169,10 @@ export async function run4kWallpapersDownload(page: Page, options: RunOptions) {
         });
 
         if (!downloadOriginal) continue;
+
+        if (status?.download_url && status.download_url !== dlUrl) {
+          log.info(`[4kwallpapers] Download url updated for: ${pageUrl}`);
+        }
 
         const downloaded = await downloadToFile(page, dlUrl, outPath);
         if (!downloaded) {

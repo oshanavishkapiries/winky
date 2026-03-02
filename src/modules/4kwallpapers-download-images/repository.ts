@@ -81,6 +81,22 @@ export async function wallpaperExists(hash_id: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
+export interface WallpaperStatusRow {
+  hash_id: string;
+  downloaded_at: string | null;
+  download_url: string | null;
+}
+
+export async function getWallpaperStatus(
+  hash_id: string,
+): Promise<WallpaperStatusRow | null> {
+  const res = await db.query<WallpaperStatusRow>(
+    "SELECT hash_id, downloaded_at::text as downloaded_at, download_url FROM wallpapers_4kwallpapers WHERE hash_id = $1 LIMIT 1",
+    [hash_id],
+  );
+  return res.rows[0] ?? null;
+}
+
 export async function upsertWallpaper(input: UpsertWallpaperInput): Promise<void> {
   const q = `
     INSERT INTO wallpapers_4kwallpapers (
