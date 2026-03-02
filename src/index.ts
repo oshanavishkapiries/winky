@@ -103,10 +103,11 @@ async function showInteractiveMenu() {
   } else if (response.action === "start_mcp") {
     log.info("Booting MCP Protocol on StdIO...");
     // We launch it via ts-node directly taking over the current process's stdio
+    // shell: true is critical for Windows to resolve 'npx.cmd'
     require("child_process").spawn(
       "npx",
       ["ts-node", path.resolve(__dirname, "./core/mcp-server.ts")],
-      { stdio: "inherit" },
+      { stdio: "inherit", shell: true },
     );
   } else {
     log.info("Goodbye!");

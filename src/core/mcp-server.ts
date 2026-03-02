@@ -6,7 +6,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { createPersistentContext, saveStorageState } from "./context";
 import { config } from "../config";
-import { log } from "./logger";
 import { BrowserContext, Page } from "playwright";
 
 // Manage the shared Playwright instances safely within the MCP lifecycle
@@ -203,13 +202,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function startMcpServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log.info("[MCP] Winky Playwright Server established on stdio buffer.");
+  console.error("[MCP] Winky Playwright Server established on stdio buffer.");
 }
 
 // Automatically start if executed directly
 if (require.main === module) {
   startMcpServer().catch((error) => {
-    log.error(`[MCP] Fatal boot error: ${error}`);
+    console.error(`[MCP] Fatal boot error: ${error}`);
     process.exit(1);
   });
 }
