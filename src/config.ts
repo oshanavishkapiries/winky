@@ -7,4 +7,7 @@ export const config = {
   storageStatePath: process.env.STORAGE_STATE ?? "./src/storage/state.json",
   downloadsDir: process.env.DOWNLOADS_DIR ?? "./output/downloads",
   screenshotsDir: process.env.SCREENSHOTS_DIR ?? "./output/screenshots",
+  databaseUrl:
+    process.env.DATABASE_URL ??
+    "postgresql://postgres:postgres@localhost:5432/winky",
 };
