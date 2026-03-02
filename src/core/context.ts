@@ -1,4 +1,8 @@
-import { chromium, type BrowserContext } from "playwright";
+import { type BrowserContext } from "playwright";
+import { chromium } from "playwright-extra";
+import stealth from "puppeteer-extra-plugin-stealth";
+
+chromium.use(stealth());
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "../config";
@@ -22,6 +26,13 @@ export async function createPersistentContext(): Promise<BrowserContext> {
     acceptDownloads: true,
     downloadsPath: config.downloadsDir,
     viewport: { width: 1365, height: 768 },
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-infobars",
+    ],
+    ignoreDefaultArgs: ["--enable-automation"],
   });
 
   context.setDefaultTimeout(60_000);

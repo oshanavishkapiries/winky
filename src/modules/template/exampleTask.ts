@@ -10,4 +10,8 @@ export async function exampleTask(page: Page) {
 
   // ✅ Put your scraping logic here later
   // e.g., await page.locator('...').textContent()
+
+  await page.waitForTimeout(30 * 60 * 1000);
+
+
 }

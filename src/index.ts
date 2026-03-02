@@ -3,8 +3,10 @@ import path from "node:path";
 import { createPersistentContext, saveStorageState } from "./core/context";
 import { log } from "./core/logger";
 import { config } from "./config";
-import { googleMapsDataExtract } from "./modules/google-maps-extract/google-maps-data-extract";
 
+// scripts
+import { googleMapsDataExtract } from "./modules/google-maps-extract/google-maps-data-extract";
+import { botTestTask } from "./modules/template/botTestTask";
 
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
@@ -20,6 +22,7 @@ async function main() {
 
   try {
     await googleMapsDataExtract(page);
+    // await botTestTask(page);
 
     // Save updated cookies/localstorage/session for next run
     await saveStorageState(context);
